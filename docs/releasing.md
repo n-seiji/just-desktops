@@ -2,7 +2,7 @@
 
 Merging a change to `JD_VERSION` in `src/common.h` into `main` runs `.github/workflows/release.yml`. The `check` job skips the run if `vX.Y.Z` already has a release, a draft or a git tag. Otherwise the `build` job builds the CLI tarballs and the app zip and stores them in a draft release. After you approve the `release` environment, the `publish` job verifies the checksums, attests the files and publishes the release. GitHub creates the `vX.Y.Z` tag at that point, on the merged commit. Nobody tags by hand.
 
-Without the secrets below (in the `signing` environment) the artifacts are ad-hoc signed, as before. With them the workflow signs with a Developer ID Application certificate, notarizes, staples the app and re-zips it, then computes the checksums from the final files. The attestations are made from those same files after approval.
+A release is always Developer ID signed and notarized: without all five secrets below (in the `signing` environment) the `build` job fails before building. The workflow signs with a Developer ID Application certificate, notarizes, staples the app and re-zips it, then computes the checksums from the final files. The attestations are made from those same files after approval.
 
 ## One-time setup
 
@@ -57,13 +57,25 @@ gh secret set ASC_ISSUER_ID --env signing               # prompts: the Issuer ID
 
 Delete `cert.p12` and the `.p8` afterwards, or store them in a password manager.
 
-Setting only some of a group fails the release before building. Notarization without the certificate secrets fails as well.
+The release fails before building unless all five are set.
 
 Use a dedicated App Store Connect API key, with the Developer role, for this repository (step 2), not one shared with other repositories.
 
 ### 5. Delete the old repository secrets
 
-If the five secrets were set at repository scope before, delete them with `gh secret delete NAME` (for each of the five), but only after the first successful release that used the `signing` environment. Repository-level secrets stay readable by every workflow until they are deleted, so the environment protects nothing while they exist. During the switch an environment secret of the same name takes precedence in the `build` job, so the release keeps working.
+If the five secrets were ever set at repository scope, delete the repository-level ones right after the five `signing` environment secrets are set. Do not wait for a release.
+
+Jobs that run in an environment can also read repository-level secrets. So while those secrets exist, the environment restriction (deployable from `main` only) protects nothing: any workflow can still read them.
+
+```sh
+gh secret list                  # repository-level secrets: none of the five should remain
+gh secret list --env signing    # the five environment secrets
+gh secret delete DEVELOPER_ID_P12_BASE64
+gh secret delete DEVELOPER_ID_P12_PASSWORD
+gh secret delete ASC_KEY_ID
+gh secret delete ASC_ISSUER_ID
+gh secret delete ASC_KEY_P8_BASE64
+```
 
 ## Cutting a release
 
