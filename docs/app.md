@@ -1,6 +1,6 @@
 # The app
 
-Install it with `brew install --cask n-seiji/tap/just-desktops`, or download `just-desktops-<version>.app.zip` from [Releases](https://github.com/n-seiji/just-desktops/releases/latest). Releases are signed with a Developer ID and notarized by Apple. To build it yourself, run `mise run app` (it lands in `dist/just-desktops.app`).
+Install it with `brew trust n-seiji/tap` (once) and `brew install --cask n-seiji/tap/just-desktops`, or download `just-desktops-<version>.app.zip` from [Releases](https://github.com/n-seiji/just-desktops/releases/latest). Releases are signed with a Developer ID and notarized by Apple. To build it yourself, run `mise run app` (it lands in `dist/just-desktops.app`).
 
 ## First launch
 

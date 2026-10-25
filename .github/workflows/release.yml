@@ -58,6 +58,8 @@ jobs:
     needs: check
     if: needs.check.outputs.release == 'true'
     runs-on: macos-14
+    # Holds the signing and notarization secrets; only main can deploy to it (scripts/setup-release-env.sh).
+    environment: signing
     permissions:
       contents: write
     outputs:
@@ -93,19 +95,19 @@ jobs:
           if [ -n "$P12_BASE64" ] && [ -n "$P12_PASSWORD" ]; then
             signing=1
           elif [ -n "$P12_BASE64$P12_PASSWORD" ]; then
-            echo "DEVELOPER_ID_P12_BASE64 and DEVELOPER_ID_P12_PASSWORD must be set together" >&2; exit 1
+            echo "DEVELOPER_ID_P12_BASE64 and DEVELOPER_ID_P12_PASSWORD must be set together, as secrets of the signing environment (gh secret set NAME --env signing)" >&2; exit 1
           fi
           if [ -n "$KEY_ID" ] && [ -n "$ISSUER_ID" ] && [ -n "$KEY_P8_BASE64" ]; then
             notarize=1
           elif [ -n "$KEY_ID$ISSUER_ID$KEY_P8_BASE64" ]; then
-            echo "ASC_KEY_ID, ASC_ISSUER_ID and ASC_KEY_P8_BASE64 must be set together" >&2; exit 1
+            echo "ASC_KEY_ID, ASC_ISSUER_ID and ASC_KEY_P8_BASE64 must be set together, as secrets of the signing environment (gh secret set NAME --env signing)" >&2; exit 1
           fi
           if [ "$notarize" = 1 ] && [ "$signing" = 0 ]; then
-            echo "notarization needs the Developer ID certificate secrets" >&2; exit 1
+            echo "notarization needs the Developer ID certificate secrets (gh secret set NAME --env signing)" >&2; exit 1
           fi
           echo "SIGNING=$signing" >> "$GITHUB_ENV"
           echo "NOTARIZE=$notarize" >> "$GITHUB_ENV"
-          echo "signing=$signing notarize=$notarize (0 means ad-hoc, as before)"
+          echo "signing=$signing notarize=$notarize (0 means ad-hoc; secrets live in the signing environment: gh secret set NAME --env signing)"
       - name: Import Developer ID certificate
         if: env.SIGNING == '1'
         env:
