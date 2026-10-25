@@ -74,6 +74,7 @@ Three ways to see the windows on this desktop:
 ### App
 
 ```sh
+brew trust n-seiji/tap        # once: Homebrew only loads casks from third-party taps you trust
 brew install --cask n-seiji/tap/just-desktops
 ```
 

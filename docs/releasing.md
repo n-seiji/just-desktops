@@ -2,7 +2,7 @@
 
 Merging a change to `JD_VERSION` in `src/common.h` into `main` runs `.github/workflows/release.yml`. The `check` job skips the run if `vX.Y.Z` already has a release, a draft or a git tag. Otherwise the `build` job builds the CLI tarballs and the app zip and stores them in a draft release. After you approve the `release` environment, the `publish` job verifies the checksums, attests the files and publishes the release. GitHub creates the `vX.Y.Z` tag at that point, on the merged commit. Nobody tags by hand.
 
-Without the secrets below the artifacts are ad-hoc signed, as before. With them the workflow signs with a Developer ID Application certificate, notarizes, staples the app and re-zips it, then computes the checksums from the final files. The attestations are made from those same files after approval.
+A release is always Developer ID signed and notarized: without all five secrets below (in the `signing` environment) the `build` job fails before building. The workflow signs with a Developer ID Application certificate, notarizes, staples the app and re-zips it, then computes the checksums from the final files. The attestations are made from those same files after approval.
 
 ## One-time setup
 
@@ -23,35 +23,58 @@ The certificate carries your legal name, and it is shown in the Gatekeeper dialo
 2. Download `AuthKey_<KEYID>.p8`. Apple lets you download it once.
 3. Note the Key ID and the Issuer ID shown on that page.
 
-### 3. Repository secrets
-
-Run these from the repository, with the real files and values. Nothing is echoed.
-
-```sh
-base64 -i cert.p12 | gh secret set DEVELOPER_ID_P12_BASE64
-gh secret set DEVELOPER_ID_P12_PASSWORD          # prompts, input hidden
-base64 -i AuthKey_ABC123DEFG.p8 | gh secret set ASC_KEY_P8_BASE64
-gh secret set ASC_KEY_ID                         # prompts: the Key ID
-gh secret set ASC_ISSUER_ID                      # prompts: the Issuer ID
-```
-
-Delete `cert.p12` and the `.p8` afterwards, or store them in a password manager.
-
-Setting only some of a group fails the release before building. Notarization without the certificate secrets fails as well.
-
-### 4. Release environment
+### 3. Create the environments
 
 ```sh
 scripts/setup-release-env.sh
 ```
 
-Run it once, and again after the change that moved the release trigger to `main` merges, before the first run. It creates the `release` environment with you as the required reviewer and allows deployments from the `main` branch only. It replaces the old `v*` tag policy. It is safe to re-run. Set `REVIEWER` or pass a login to change the reviewer, and `REPO` to change the repository.
+Run it first, and again after the change that moved the release trigger to `main` merges. It creates two environments, both deployable from the `main` branch only (it replaces the old `v*` tag policy):
 
-Without it GitHub creates the environment on first use with no reviewers, and `publish` runs unapproved. Check it:
+- `signing` holds the signing and notarization secrets for the `build` job. It has no reviewers.
+- `release` gates the `publish` job, with you as the required reviewer.
+
+It is safe to re-run. Set `REVIEWER` or pass a login to change the reviewer, and `REPO` to change the repository. Without it GitHub creates an environment on first use with no reviewers and no branch policy, and `publish` runs unapproved. Check it:
 
 ```sh
+gh api repos/n-seiji/just-desktops/environments/signing -q '.protection_rules'
 gh api repos/n-seiji/just-desktops/environments/release -q '.protection_rules'
+gh api repos/n-seiji/just-desktops/environments/signing/deployment-branch-policies -q '.branch_policies'
 gh api repos/n-seiji/just-desktops/environments/release/deployment-branch-policies -q '.branch_policies'
+```
+
+### 4. Environment secrets
+
+Run these from the repository, with the real files and values. Nothing is echoed. The secrets belong to the `signing` environment, which only jobs running on `main` can use, so workflows on other branches cannot read them.
+
+```sh
+base64 -i cert.p12 | gh secret set DEVELOPER_ID_P12_BASE64 --env signing
+gh secret set DEVELOPER_ID_P12_PASSWORD --env signing   # prompts, input hidden
+base64 -i AuthKey_ABC123DEFG.p8 | gh secret set ASC_KEY_P8_BASE64 --env signing
+gh secret set ASC_KEY_ID --env signing                  # prompts: the Key ID
+gh secret set ASC_ISSUER_ID --env signing               # prompts: the Issuer ID
+```
+
+Delete `cert.p12` and the `.p8` afterwards, or store them in a password manager.
+
+The release fails before building unless all five are set.
+
+Use a dedicated App Store Connect API key, with the Developer role, for this repository (step 2), not one shared with other repositories.
+
+### 5. Delete the old repository secrets
+
+If the five secrets were ever set at repository scope, delete the repository-level ones right after the five `signing` environment secrets are set. Do not wait for a release.
+
+Jobs that run in an environment can also read repository-level secrets. So while those secrets exist, the environment restriction (deployable from `main` only) protects nothing: any workflow can still read them.
+
+```sh
+gh secret list                  # repository-level secrets: none of the five should remain
+gh secret list --env signing    # the five environment secrets
+gh secret delete DEVELOPER_ID_P12_BASE64
+gh secret delete DEVELOPER_ID_P12_PASSWORD
+gh secret delete ASC_KEY_ID
+gh secret delete ASC_ISSUER_ID
+gh secret delete ASC_KEY_P8_BASE64
 ```
 
 ## Cutting a release

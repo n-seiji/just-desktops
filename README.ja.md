@@ -74,6 +74,7 @@
 ### アプリ
 
 ```sh
+brew trust n-seiji/tap        # 最初に一度: Homebrew は信頼した公式以外の tap の cask しか読み込みません
 brew install --cask n-seiji/tap/just-desktops
 ```
 
