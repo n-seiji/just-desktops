@@ -51,7 +51,9 @@ static uint32_t last_front;
         menubar_overflow_close();
         return;
     }
-    strip_hit_t hit = strip_hit([b convertPoint:e.locationInWindow fromView:nil].x, b.bounds.size.width, last_n, last_over);
+    // The pointer, not the event: macOS may hand the item a click located at the button's centre.
+    NSPoint at = [b convertPoint:[b.window convertPointFromScreen:NSEvent.mouseLocation] fromView:nil];
+    strip_hit_t hit = strip_hit(at.x, b.bounds.size.width, last_n, last_over);
     if (hit.slot >= 0) {
         wm_set_trigger("menubar");
         wm_focus_wid(last_wids[hit.slot]);
