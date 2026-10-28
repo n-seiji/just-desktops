@@ -53,11 +53,12 @@ static CGEventRef on_key(CGEventTapProxy proxy, CGEventType type, CGEventRef ev,
         return ev;
     }
     if (type != kCGEventKeyDown) return ev;
-    // Before any early return, so Cmd-Tab is seen. Typing and held-down repeats are not calls.
+    // Before any early return, so Cmd-Tab and other apps' shortcuts are seen. Typing (no modifier, or only Shift)
+    // and held-down repeats are not calls.
     if (CGEventGetIntegerValueField(ev, kCGKeyboardEventAutorepeat) == 0) {
         int64_t code = CGEventGetIntegerValueField(ev, kCGKeyboardEventKeycode);
-        bool cmd = CGEventGetFlags(ev) & kCGEventFlagMaskCommand;
-        if (code == KEY_RETURN || code == KEY_ENTER || (code == KEY_TAB && cmd)) last_call_key = CFAbsoluteTimeGetCurrent();
+        bool shortcut = CGEventGetFlags(ev) & (kCGEventFlagMaskCommand | kCGEventFlagMaskControl | kCGEventFlagMaskAlternate);
+        if (code == KEY_RETURN || code == KEY_ENTER || shortcut) last_call_key = CFAbsoluteTimeGetCurrent();
     }
     if (armed && CGEventGetIntegerValueField(ev, kCGKeyboardEventKeycode) == KEY_ESC) {
         cancel();

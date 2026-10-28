@@ -18,7 +18,7 @@
 // the main display; a desktop switch parks one set and unparks another, and a parked window that
 // gets focused (Raycast, Cmd-Tab, Dock) switches to its desktop instead of coming here, after a short
 // check that the user did not just minimize, close or quit their window here. In the quiet period after a
-// switch that focus is macOS's doing and is ignored, unless a click or Return / Enter / Cmd-Tab came
+// switch that focus is macOS's doing and is ignored, unless a click, Return / Enter or a shortcut came
 // just before it: that is a call, followed as usual.
 
 static uint32_t last_focus[JD_MAX_WS + 1];
@@ -305,7 +305,7 @@ static void follow_later(uint32_t wid, bool user_call) {
     });
 }
 
-// A mouse click or Return / Enter / Cmd-Tab just before now, after the quiet period began: the user called this window.
+// A mouse click, Return / Enter or a shortcut (Cmd-Tab, an app's own key) just before now, after the quiet period began: the user called this window.
 static bool called_by_user(double now) {
     double click = CGEventSourceSecondsSinceLastEventType(kCGEventSourceStateHIDSystemState, kCGEventLeftMouseDown);
     double rclick = CGEventSourceSecondsSinceLastEventType(kCGEventSourceStateHIDSystemState, kCGEventRightMouseDown);
