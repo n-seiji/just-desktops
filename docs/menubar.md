@@ -16,7 +16,7 @@ The command line default is `off`. The app always has an item: its default is `o
 
 - One monochrome glyph per window. Two Finder windows show two Finder glyphs.
 - Glyphs are grouped by app. An app's windows stay in a fixed order, so changing focus never reshuffles them. The [switcher](switcher.md) lists windows in the same order.
-- The current desktop's key sits at the right end in an outlined box. The item grows and shrinks to the left, so the key stays put.
+- The current desktop's key sits at the right end in an outlined box. The item always has room for 5 glyphs, with the strip right-aligned, so switching between desktops with up to 5 slots never changes its width (macOS animates the whole menu bar on a width change). With more it widens at once and narrows again after 30 s without needing the extra room.
 - The focused window's glyph (only that one, not every window of its app) is cut out of a filled tile.
 - The glyphs are template images, so macOS tints them for light and dark menu bars.
 - It redraws only when the desktop, the focused window or the set of windows changes.
