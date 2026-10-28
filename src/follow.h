@@ -10,7 +10,14 @@ typedef enum {
     FOCUS_IGNORE,  // macOS handing focus around after a switch or a close, or the window we just parked
 } focus_act_t;
 
-focus_act_t focus_act(bool parked, bool settling, bool recheck, bool is_stale, bool cur_has_win);
+// user_call: the user just did something that calls a window (input_is_call). That is followed even while
+// settling or at the recheck, but never the window we just parked.
+focus_act_t focus_act(bool parked, bool settling, bool recheck, bool is_stale, bool cur_has_win, bool user_call);
+
+// Whether input at `at` (CFAbsoluteTime, 0 if none) is a call for the window focused at `now`: it came after the
+// quiet period began at settle_start (so not the key that switched) and at most CALL_INPUT_S before now.
+#define CALL_INPUT_S 1.0
+bool input_is_call(double at, double settle_start, double now);
 
 typedef enum {
     FOLLOW_DROP,   // the call is over or handled elsewhere: do nothing
@@ -23,7 +30,8 @@ typedef enum {
 // so a call is acted on only after a short delay, when its cause is clearer.
 // still_focused: the window is still the focused one. now_here: it is on this desktop now.
 // settling: a quiet period is active. cur_left: the window last used on this desktop is minimized, closed or its app quit.
-follow_act_t follow_check(bool still_focused, bool now_here, bool settling, bool cur_left);
+// user_call: the call came from user input (see focus_act): it stands even while settling.
+follow_act_t follow_check(bool still_focused, bool now_here, bool settling, bool cur_left, bool user_call);
 
 typedef enum {
     READ_OK,      // the window answered

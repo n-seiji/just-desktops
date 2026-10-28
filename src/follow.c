@@ -1,15 +1,20 @@
 #include "follow.h"
 
-focus_act_t focus_act(bool parked, bool settling, bool recheck, bool is_stale, bool cur_has_win) {
+focus_act_t focus_act(bool parked, bool settling, bool recheck, bool is_stale, bool cur_has_win, bool user_call) {
     if (!parked) return FOCUS_RECORD;
+    if (user_call && !is_stale) return FOCUS_FOLLOW;
     if (settling || is_stale) return FOCUS_IGNORE;
     if (recheck) return cur_has_win ? FOCUS_REFOCUS : FOCUS_STALE;
     return FOCUS_FOLLOW;
 }
 
-follow_act_t follow_check(bool still_focused, bool now_here, bool settling, bool cur_left) {
+bool input_is_call(double at, double settle_start, double now) {
+    return at > settle_start && at <= now && now - at <= CALL_INPUT_S;
+}
+
+follow_act_t follow_check(bool still_focused, bool now_here, bool settling, bool cur_left, bool user_call) {
     if (!still_focused || now_here) return FOLLOW_DROP;
-    if (settling) return FOLLOW_WAIT;
+    if (settling && !user_call) return FOLLOW_WAIT;
     return cur_left ? FOLLOW_LEFT : FOLLOW_SWITCH;
 }
 

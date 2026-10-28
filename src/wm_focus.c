@@ -6,6 +6,7 @@
 #include "config.h"
 #include "follow.h"
 #include "hist.h"
+#include "hotkey.h"
 #include "menubar.h"
 #include "shown.h"
 #include <dispatch/dispatch.h>
@@ -16,7 +17,9 @@
 // Parking, switching and focus. A window of an inactive desktop sits at the bottom-right corner of
 // the main display; a desktop switch parks one set and unparks another, and a parked window that
 // gets focused (Raycast, Cmd-Tab, Dock) switches to its desktop instead of coming here, after a short
-// check that the user did not just minimize, close or quit their window here.
+// check that the user did not just minimize, close or quit their window here. In the quiet period after a
+// switch that focus is macOS's doing and is ignored, unless a click or Return / Enter / Cmd-Tab came
+// just before it: that is a call, followed as usual.
 
 static uint32_t last_focus[JD_MAX_WS + 1];
 static uint32_t stale; // parked window macOS still reports as focused
@@ -260,12 +263,13 @@ static bool cur_window_left(void) {
 
 // A check queued earlier is never cancelled by wm_move_focused or wm_focus_wid, which leave follow_gen alone.
 // It is safe because follow_check_now re-reads the focused window and the quiet period when it runs.
-static void follow_check_now(uint32_t wid, const char *why) {
+// user_call: the call came from input during the quiet period (see on_focus): the quiet period does not hold it back.
+static void follow_check_now(uint32_t wid, const char *why, bool user_call) {
     win_t *f = wm_focused();
     bool still = f && f->wid == wid;
     bool here = still && wm_here(f);
     bool settling = CFAbsoluteTimeGetCurrent() < settle_until;
-    switch (follow_check(still, here, settling, still && !here && !settling && cur_window_left())) {
+    switch (follow_check(still, here, settling, still && !here && !settling && cur_window_left(), user_call)) {
     case FOLLOW_LEFT:
         // The user left this desktop's window: not a call. Let the focus return here, or stay if it is empty.
         trigger = why;
@@ -278,7 +282,7 @@ static void follow_check_now(uint32_t wid, const char *why) {
         trigger = why;
         // wm_switch can track new windows and move wins: f is not used after it.
         last_focus[f->ws] = f->wid;
-        log_focus(f, "follow", f->ws);
+        log_focus(f, user_call ? "call" : "follow", f->ws);
         visit(f->wid);
         wm_switch(f->ws);
         return;
@@ -293,12 +297,21 @@ static void follow_check_now(uint32_t wid, const char *why) {
     }
 }
 
-static void follow_later(uint32_t wid) {
+static void follow_later(uint32_t wid, bool user_call) {
     unsigned gen = ++follow_gen;
     const char *why = trigger;
     dispatch_after(dispatch_time(DISPATCH_TIME_NOW, FOLLOW_DELAY_S * NSEC_PER_SEC), dispatch_get_main_queue(), ^{
-        if (gen == follow_gen) follow_check_now(wid, why);
+        if (gen == follow_gen) follow_check_now(wid, why, user_call);
     });
+}
+
+// A mouse click or Return / Enter / Cmd-Tab just before now, after the quiet period began: the user called this window.
+static bool called_by_user(double now) {
+    double click = CGEventSourceSecondsSinceLastEventType(kCGEventSourceStateHIDSystemState, kCGEventLeftMouseDown);
+    double rclick = CGEventSourceSecondsSinceLastEventType(kCGEventSourceStateHIDSystemState, kCGEventRightMouseDown);
+    if (rclick < click) click = rclick;
+    double at = now - click, key = hotkey_last_call_key();
+    return input_is_call(at > key ? at : key, settle_start, now);
 }
 
 static void on_focus(bool recheck) {
@@ -315,7 +328,9 @@ static void on_focus(bool recheck) {
             settle_until = t + SETTLE_S < cap ? t + SETTLE_S : cap;
             recheck_after_settle();
         }
-        switch (focus_act(true, settling, recheck, w->wid == stale, first_in(cur_ws) != NULL)) {
+        // During the quiet period or at its recheck, input that calls a window up makes this a call, not macOS's doing.
+        bool user_call = (settling || recheck) && called_by_user(t);
+        switch (focus_act(true, settling, recheck, w->wid == stale, first_in(cur_ws) != NULL, user_call)) {
         case FOCUS_REFOCUS:
             log_focus(w, "refocus", cur_ws);
             focus_in_current();
@@ -325,7 +340,7 @@ static void on_focus(bool recheck) {
             last_focus[cur_ws] = 0; // nothing usable here: a later call must not be read as this desktop's window leaving
             return;
         case FOCUS_FOLLOW:
-            follow_later(w->wid);
+            follow_later(w->wid, user_call);
             return;
         default:
             return;
