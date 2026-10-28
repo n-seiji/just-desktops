@@ -4,7 +4,7 @@
 #include <stdbool.h>
 #include <stdint.h>
 
-#define JD_VERSION "0.1.5"
+#define JD_VERSION "0.1.6"
 #define JD_MAX_WS 10 // most desktops `keys` can bind
 #define JD_MENUBAR_SLOTS 10 // menu bar glyph slots: with more windows the last slot is a "+k" count
 #define JD_MENUBAR_WINS 64  // windows the menu bar looks at
