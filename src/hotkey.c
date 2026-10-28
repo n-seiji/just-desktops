@@ -15,6 +15,8 @@
 
 #define KEY_TAB 0x30
 #define KEY_ESC 0x35
+#define KEY_RETURN 0x24
+#define KEY_ENTER 0x4C
 #define KEY_LBRACKET 0x21
 #define KEY_RBRACKET 0x1E
 
@@ -34,6 +36,10 @@ static void cancel(void) {
     dispatch_async(dispatch_get_main_queue(), ^{ switcher_cancel(); });
 }
 
+static double last_call_key;
+
+double hotkey_last_call_key(void) { return last_call_key; }
+
 static CGEventRef on_key(CGEventTapProxy proxy, CGEventType type, CGEventRef ev, void *ctx) {
     (void)proxy; (void)ctx;
     if (type == kCGEventTapDisabledByTimeout || type == kCGEventTapDisabledByUserInput) {
@@ -47,6 +53,12 @@ static CGEventRef on_key(CGEventTapProxy proxy, CGEventType type, CGEventRef ev,
         return ev;
     }
     if (type != kCGEventKeyDown) return ev;
+    // Before any early return, so Cmd-Tab is seen. Typing and held-down repeats are not calls.
+    if (CGEventGetIntegerValueField(ev, kCGKeyboardEventAutorepeat) == 0) {
+        int64_t code = CGEventGetIntegerValueField(ev, kCGKeyboardEventKeycode);
+        bool cmd = CGEventGetFlags(ev) & kCGEventFlagMaskCommand;
+        if (code == KEY_RETURN || code == KEY_ENTER || (code == KEY_TAB && cmd)) last_call_key = CFAbsoluteTimeGetCurrent();
+    }
     if (armed && CGEventGetIntegerValueField(ev, kCGKeyboardEventKeycode) == KEY_ESC) {
         cancel();
         return NULL;
