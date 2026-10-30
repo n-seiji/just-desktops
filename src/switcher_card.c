@@ -85,7 +85,7 @@ static int idx_of(long v) {
 }
 
 // fg at t over bg.
-static uint32_t sw_mix(uint32_t fg, uint32_t bg, CGFloat t) {
+static uint32_t mix(uint32_t fg, uint32_t bg, CGFloat t) {
     uint32_t out = 0;
     for (int sh = 16; sh >= 0; sh -= 8)
         out |= (uint32_t)lround(((fg >> sh & 255) * t) + ((bg >> sh & 255) * (1 - t))) << sh;
@@ -93,7 +93,7 @@ static uint32_t sw_mix(uint32_t fg, uint32_t bg, CGFloat t) {
 }
 
 static uint32_t dim_text(void) {
-    return sw_mix(pal.title, pal.tint, 0.45);
+    return mix(pal.title, pal.tint, 0.45);
 }
 
 static void draw_stage(void) {

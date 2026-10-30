@@ -52,11 +52,11 @@ static CGPoint origin;
 static double pos, from_pos, t0;
 
 // The row text of an entry: its cleaned title, or the app name when there is none.
-static CFStringRef sw_text(const sw_entry_t *e) {
+static CFStringRef row_text(const sw_entry_t *e) {
     return e->title ? e->title : e->app;
 }
 
-static bool sw_is_path(CFStringRef s) {
+static bool is_path(CFStringRef s) {
     return CFStringHasPrefix(s, CFSTR("~/")) || CFStringHasPrefix(s, CFSTR("/"));
 }
 
@@ -64,7 +64,7 @@ static bool sw_is_path(CFStringRef s) {
 static CGFloat fit_width(void) {
     CGFloat w = 0;
     for (int i = 0; i < n; i++) {
-        CFStringRef s = sw_text(&ents[i]);
+        CFStringRef s = row_text(&ents[i]);
         if (!s) continue;
         CTLineRef l = sw_fit(fonts[F_ROW], s, 0, 1e9, kCTLineTruncationEnd);
         w = fmax(w, CTLineGetTypographicBounds(l, NULL, NULL, NULL));
@@ -91,9 +91,9 @@ static void draw_row(CGContextRef c, sw_entry_t *e, CGFloat y) {
         CGContextDrawImage(c, (CGRect){{0, 0}, {ICON, ICON}}, e->icon);
         CGContextRestoreGState(c);
     }
-    CFStringRef main = sw_text(e);
+    CFStringRef main = row_text(e);
     if (!main) return;
-    sw_put(c, sw_fit(fonts[F_ROW], main, pal->title, right - left, sw_is_path(main) ? kCTLineTruncationStart : kCTLineTruncationEnd), left, cy);
+    sw_put(c, sw_fit(fonts[F_ROW], main, pal->title, right - left, is_path(main) ? kCTLineTruncationStart : kCTLineTruncationEnd), left, cy);
 }
 
 // All of the panel's looks live here. Between sw_begin and sw_finish the context is y-down.
