@@ -100,6 +100,25 @@ int main(void) {
         printf("FAIL input_is_call: %s = %d; want %d\n", k[i].what, got, k[i].want);
         failed++;
     }
+    static const struct {
+        const char *what;
+        double key_at, click_at, now;
+        bool want;
+    } q[] = {
+        {"fresh key", 100.5, 0, 101, true},
+        {"no key", 0, 0, 101, false},
+        {"click after the key", 100.5, 100.7, 101, false},
+        {"click before the key", 100.5, 100.2, 101, true},
+        {"key too long ago", 100, 0, 101.5, false},
+        {"key at the edge of the window", 100, 0, 101, true},
+        {"key in the future", 102, 0, 101, false},
+    };
+    for (unsigned i = 0; i < sizeof q / sizeof q[0]; i++) {
+        bool got = input_is_quick_call(q[i].key_at, q[i].click_at, q[i].now);
+        if (got == q[i].want) continue;
+        printf("FAIL input_is_quick_call: %s = %d; want %d\n", q[i].what, got, q[i].want);
+        failed++;
+    }
     if (!failed) printf("ok\n");
     return failed != 0;
 }

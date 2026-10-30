@@ -12,6 +12,10 @@ bool input_is_call(double at, double settle_start, double now) {
     return at > settle_start && at <= now && now - at <= CALL_INPUT_S;
 }
 
+bool input_is_quick_call(double key_at, double click_at, double now) {
+    return key_at > 0 && key_at > click_at && key_at <= now && now - key_at <= QUICK_CALL_S;
+}
+
 follow_act_t follow_check(bool still_focused, bool now_here, bool settling, bool cur_left, bool user_call) {
     if (!still_focused || now_here) return FOLLOW_DROP;
     if (settling && !user_call) return FOLLOW_WAIT;
