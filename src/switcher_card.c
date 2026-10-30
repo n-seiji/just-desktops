@@ -14,8 +14,9 @@
 
 // Square switcher. One glass square on the main display with one window shown large (its
 // screenshot, or its app icon until there is one), a counter and a row of dots. Like the list panel,
-// every large surface is drawn once per open: the stage is flushed once, each card is its own window
-// that is moved while it fades, and the counter and the dots are tiny windows redrawn per step.
+// no large surface is redrawn to animate: the stage is flushed once per open, each card is its own window
+// (drawn when it takes a position, and again when its screenshot arrives) that is moved while it fades,
+// and the counter and the dots are tiny windows redrawn per step.
 // Everything exists only while ⌥ is held after a Tab; the animation timer runs only while cards move.
 //
 // The windows of the entries form a strip with unwrapped positions v (the entry is v mod n).

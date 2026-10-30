@@ -373,8 +373,6 @@ static void refresh_menubar_later(void) {
     run_after(FRESH_S + 0.05, ^{ wm_refresh_menubar(wm_focused()); });
 }
 
-// Apps set to `none` leave with the desktop, except one with no window tracked. Called inside wm_switch, so the
-// focus macOS moves to after a hide falls in the quiet period.
 // A `none` app with a tracked window. Keyed on the app, not the focused window: a panel such as a
 // quick terminal is never tracked.
 static bool every_app(pid_t pid) {
@@ -385,6 +383,8 @@ static bool every_app(pid_t pid) {
     return false;
 }
 
+// Apps set to `none` leave with the desktop, except one with no window tracked. Called inside wm_switch, so the
+// focus macOS moves to after a hide falls in the quiet period.
 static void hide_every(void) {
     for (int i = 0; i < napps; i++)
         if (every_app(apps[i].pid) && apps_hide(apps[i].pid)) log_hide(apps[i].pid);

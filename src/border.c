@@ -6,7 +6,7 @@
 #include <dlfcn.h>
 #include <math.h>
 
-// A thin white ring drawn directly through SkyLight (no AppKit), floating
+// A thin ring drawn directly through SkyLight (no AppKit), floating
 // off the focused window with a small gap and ordered right above it. It is
 // four thin windows (top, bottom, left, right) instead of one window the size
 // of the target: a window's backing store is its full bounding rect, so one

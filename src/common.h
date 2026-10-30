@@ -1,5 +1,5 @@
 #pragma once
-// Types and limits that more than one module uses.
+// The version, the limits and sw_entry_t, shared across modules.
 #include <ApplicationServices/ApplicationServices.h>
 #include <stdbool.h>
 #include <stdint.h>

@@ -23,7 +23,7 @@
 extern char **environ;
 static dispatch_source_t signal_sources[3];
 
-// The app is identified by its bundle id. JD_APP_MODE=1 turns the app mode on for the bare binary:
+// The app is identified by its bundle id. Any value of JD_APP_MODE turns the app mode on for the bare binary:
 // a test hook for the app's menu and settings without building a bundle; it is not a user setting.
 bool jd_app_mode(void) {
     static int app = -1;
@@ -45,7 +45,7 @@ static bool temp_path(const char *name, char *path, size_t cap) {
 }
 
 #define STATE_FILE "just-desktops.state"
-static bool managing; // wm_restore_membership ran: there is a state worth saving
+static bool managing; // wm_init ran: there is a state worth saving
 
 // Reads the desktops the previous run saved, then deletes the file so a later crash cannot replay it.
 static void load_membership(void) {

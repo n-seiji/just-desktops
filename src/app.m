@@ -6,7 +6,7 @@
 #include <spawn.h>
 
 // Everything the .app does for a user without a terminal: the first-run permission panel, the
-// login item, and the config file. Loaded lazily; the bare binary never reaches this code.
+// login item, the config file and About. Only reached when jd_app_mode() is true; ServiceManagement is loaded on first use.
 
 extern char **environ;
 

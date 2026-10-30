@@ -1,6 +1,6 @@
 #pragma once
-// Motion and layout math of the square switcher's cards: easing, where a card sits, which
-// positions need a window, how a screenshot fits its box.
+// Motion and layout math of the switchers: the square cards' easing, where a card sits, which
+// positions need a window, how a screenshot fits its box, and the list highlight's slide.
 #include <ApplicationServices/ApplicationServices.h>
 
 // Progress of cubic-bezier(0.22, 0.9, 0.25, 1) at time fraction k in 0..1: most of the travel happens

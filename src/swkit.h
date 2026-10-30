@@ -3,7 +3,8 @@
 #include <CoreText/CoreText.h>
 #include <dispatch/dispatch.h>
 
-// Drawing and window helpers shared by the list (switcher.c) and card (switcher_card.c) switchers.
+// Drawing and window helpers shared by the list (switcher.c) and card (switcher_card.c) switchers;
+// sw_free_entries also serves the menu bar's "+k" panel.
 
 // The panel's colours; the dark one is chosen unless the system is in Light mode.
 typedef struct {
@@ -28,8 +29,9 @@ void sw_finish(CGContextRef c);
 void sw_fill_rrect(CGContextRef c, CGRect r, CGFloat radius, uint32_t rgb, CGFloat a);
 // A 1pt border drawn inside r, lit along the top and fading to a flat rim.
 void sw_edge_rrect(CGContextRef c, CGRect r, CGFloat radius, const palette_t *pal);
-// A translucent, mouse-transparent window at at of size sz, drawn at res (2 is sharp on Retina, 1 costs a quarter of the memory). With radius > 0 the background
-// is blurred and the window takes the rounded shape.
+// A translucent, mouse-transparent window at `at` of size sz, drawn at res (2 is sharp on Retina, 1 costs a quarter
+// of the memory). With radius > 0 the background is blurred and the window takes the rounded shape. Returns 0 on
+// failure, else the window id, with its drawing context in *out (NULL if that failed).
 uint32_t sw_window(int cid, CGPoint at, CGSize sz, CGFloat radius, double res, CGContextRef *out);
 // Orders out and releases a window from sw_window with its context; a no-op when *wid is 0.
 void sw_close_window(int cid, uint32_t *wid, CGContextRef *ctx);

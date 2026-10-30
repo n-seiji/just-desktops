@@ -51,7 +51,6 @@ static void add_choice(NSMenu *m, NSString *title, bool current, NSString *key, 
 }
 
 // Built on every open, so the checks match the settings in force and the login item's state.
-// The bare binary keeps its one-item menu; the rest is for the app.
 NSMenu *menubar_menu(menubar_mode_t mode) {
     if (!actions) actions = [JDMenuActions new];
     NSMenu *m = [NSMenu new];

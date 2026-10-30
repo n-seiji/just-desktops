@@ -22,5 +22,5 @@ char config_key_char(int i); // that key as an uppercase character
 bool config_parse_on(const char *v);
 sw_style_t config_parse_switcher(const char *v); // "list"/"on", "square", "off" (instant, no panel); anything else is list
 CGEventFlags config_parse_modifier(const char *v); // opt|option|alt, cmd|command, ctrl|control (any case); anything else is option
-menubar_mode_t config_parse_menubar(const char *v); // "on"/"strip", "icon"; anything else is off
+menubar_mode_t config_parse_menubar(const char *v); // "on"/"true"/"yes"/"strip", "icon"; anything else is off
 int config_parse_keys(const char *list, int *codes); // up to JD_MAX_WS keycodes into codes; returns how many

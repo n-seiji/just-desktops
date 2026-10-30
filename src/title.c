@@ -3,7 +3,6 @@
 
 // Window titles often end in " - <app name>" (browsers add a profile after it too).
 // Strip that tail so the title alone is the primary text. NULL means app-only.
-// An app with one window is listed by its name; with several, each shows its title.
 
 static bool is_sep(const UniChar *s, CFIndex i, CFIndex len) {
     return i + 2 < len && s[i] == ' ' && s[i + 2] == ' ' && (s[i + 1] == '-' || s[i + 1] == 0x2014 || s[i + 1] == 0x2013);

@@ -195,8 +195,6 @@ void menubar_init(menubar_mode_t m) {
     if (mode == MB_ICON) item.button.image = icon_image();
 }
 
-// over_hash identifies the windows counted in over. n windows get a glyph (pids[i] owns wids[i]); over more are only counted. front is the
-// focused window's id, 0 for none.
 void menubar_update(int ws, const pid_t *pids, const uint32_t *wids, int n, int over, uint32_t over_hash, uint32_t front) {
     if (!menubar_ready()) return;
     if (n > JD_MENUBAR_SLOTS) n = JD_MENUBAR_SLOTS;

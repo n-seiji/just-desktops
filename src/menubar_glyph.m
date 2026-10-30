@@ -5,8 +5,7 @@
 #include "glyph.h"
 
 // The glyph of each app on the strip: a white mask of its icon (see glyph_cut), or hand-drawn line art
-// for icons that have no single background to cut away. Built when an app first needs one and kept
-// until the app quits (menubar_forget).
+// (see art). Built when an app first needs one and kept until the app quits (menubar_forget).
 
 typedef struct {
     pid_t pid;

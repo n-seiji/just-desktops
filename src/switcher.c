@@ -18,8 +18,8 @@
 //
 // The highlight is its own small window that slides over the panel. Flushing the
 // panel's context again makes SkyLight keep up to two more full-size backing
-// surfaces (~4.6MB each) for about a second, so the panel is flushed once and the
-// animation only moves the highlight window.
+// surfaces (~4.6MB each) for about a second, so the panel is flushed when it opens and
+// again only when the list scrolls (top changes); the animation only moves the highlight window.
 
 #define MIN_W 420.0
 #define MAX_W 750.0

@@ -46,13 +46,14 @@ static void label_entries(sw_entry_t *list, int n) {
     free(titles);
 }
 
-// WindowServer's view of the windows that are really shown right now: on screen, not
-// transparent, and with a visible part on a display. NULL when the list is unavailable.
+// WindowServer's list of the windows on screen right now. NULL when it is unavailable.
 static CFArrayRef shown_windows(void) {
     return CGWindowListCopyWindowInfo(kCGWindowListOptionOnScreenOnly | kCGWindowListExcludeDesktopElements,
                                       kCGNullWindowID);
 }
 
+// Whether wid is really shown: in that list, not transparent, and with a visible part on a display (so not
+// a hidden app's window, one on another Space, alpha 0 or off screen). True when the list is unavailable.
 static bool is_shown(CFArrayRef shown, uint32_t wid) {
     if (!shown) return true;
     CGDirectDisplayID ds[8];
