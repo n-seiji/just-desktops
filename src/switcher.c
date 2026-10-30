@@ -37,9 +37,7 @@
 #define SHOW_DELAY_MS 150 // the panel appears only after ⌥ has been held this long since the first Tab
 
 enum { F_HEADER, F_ROW, NFONTS };
-static const struct { CGFloat size, weight; } font_specs[NFONTS] = {
-    {13, 0.23}, {16, 0.23},
-};
+static const CGFloat font_sizes[NFONTS] = {13, 16};
 
 static int cid;
 static uint32_t wid, hwid;
@@ -166,7 +164,7 @@ static void open_panel(int dir) {
     cid = SLSMainConnectionID();
     pal = sw_palette();
     bool ok = true;
-    for (int i = 0; i < NFONTS; i++) ok = (fonts[i] = sw_font(font_specs[i].size, font_specs[i].weight)) && ok;
+    for (int i = 0; i < NFONTS; i++) ok = (fonts[i] = sw_font(font_sizes[i])) && ok;
     if (!ok) {
         close_panel();
         return;

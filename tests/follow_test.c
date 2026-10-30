@@ -4,30 +4,27 @@
 static int failed;
 
 static const char *name(focus_act_t a) {
-    static const char *n[] = {"record", "follow", "refocus", "stale", "ignore"};
+    static const char *n[] = {"follow", "refocus", "stale", "ignore"};
     return n[a];
 }
 
 int main(void) {
     static const struct {
         const char *what;
-        bool parked, settling, recheck, is_stale, cur_has_win, user_call;
+        bool settling, recheck, is_stale, cur_has_win, user_call;
         focus_act_t want;
     } t[] = {
-        {"window of this desktop", false, false, false, false, true, false, FOCUS_RECORD},
-        {"window of this desktop while settling", false, true, false, false, true, false, FOCUS_RECORD},
-        {"window of this desktop at recheck", false, false, true, false, true, false, FOCUS_RECORD},
-        {"parked window called for", true, false, false, false, true, false, FOCUS_FOLLOW},
-        {"parked window called for, desktop empty", true, false, false, false, false, false, FOCUS_FOLLOW},
-        {"parked window while settling", true, true, false, false, true, false, FOCUS_IGNORE},
-        {"parked window while settling, at recheck", true, true, true, false, true, false, FOCUS_IGNORE},
-        {"the window just parked", true, false, false, true, true, false, FOCUS_IGNORE},
-        {"the window just parked, at recheck", true, false, true, true, true, false, FOCUS_IGNORE},
-        {"parked window at recheck", true, false, true, false, true, false, FOCUS_REFOCUS},
-        {"parked window at recheck, desktop empty", true, false, true, false, false, false, FOCUS_STALE},
+        {"parked window called for", false, false, false, true, false, FOCUS_FOLLOW},
+        {"parked window called for, desktop empty", false, false, false, false, false, FOCUS_FOLLOW},
+        {"parked window while settling", true, false, false, true, false, FOCUS_IGNORE},
+        {"parked window while settling, at recheck", true, true, false, true, false, FOCUS_IGNORE},
+        {"the window just parked", false, false, true, true, false, FOCUS_IGNORE},
+        {"the window just parked, at recheck", false, true, true, true, false, FOCUS_IGNORE},
+        {"parked window at recheck", false, true, false, true, false, FOCUS_REFOCUS},
+        {"parked window at recheck, desktop empty", false, true, false, false, false, FOCUS_STALE},
     };
     for (unsigned i = 0; i < sizeof t / sizeof t[0]; i++) {
-        focus_act_t got = focus_act(t[i].parked, t[i].settling, t[i].recheck, t[i].is_stale, t[i].cur_has_win, t[i].user_call);
+        focus_act_t got = focus_act(t[i].settling, t[i].recheck, t[i].is_stale, t[i].cur_has_win, t[i].user_call);
         if (got == t[i].want) continue;
         printf("FAIL %s = %s; want %s\n", t[i].what, name(got), name(t[i].want));
         failed++;

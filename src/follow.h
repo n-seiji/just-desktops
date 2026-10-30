@@ -3,16 +3,15 @@
 #include <stdbool.h>
 
 typedef enum {
-    FOCUS_RECORD,  // the window is on this desktop: note it
     FOCUS_FOLLOW,  // a parked window was called for: check again shortly, then switch to its desktop
     FOCUS_REFOCUS, // a parked window after a switch settled, and this desktop has windows: focus one of them
     FOCUS_STALE,   // same, but this desktop is empty: leave the parked window focused and ignore it
     FOCUS_IGNORE,  // macOS handing focus around after a switch or a close, or the window we just parked
 } focus_act_t;
 
-// user_call: the user just did something that calls a window (input_is_call). That is followed even while
-// settling or at the recheck, but never the window we just parked.
-focus_act_t focus_act(bool parked, bool settling, bool recheck, bool is_stale, bool cur_has_win, bool user_call);
+// What to do when a parked window gets focus. user_call: the user just did something that calls a window
+// (input_is_call). That is followed even while settling or at the recheck, but never the window we just parked.
+focus_act_t focus_act(bool settling, bool recheck, bool is_stale, bool cur_has_win, bool user_call);
 
 // Whether input at `at` (CFAbsoluteTime, 0 if none) is a call for the window focused at `now`: it came after the
 // quiet period began at settle_start (so not the key that switched) and at most CALL_INPUT_S before now.

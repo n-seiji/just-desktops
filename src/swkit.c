@@ -11,10 +11,12 @@ const palette_t *sw_palette(void) {
     return appearance_dark() ? &DARK : &LIGHT;
 }
 
-CTFontRef sw_font(CGFloat sz, CGFloat weight) {
+static const CGFloat FONT_WEIGHT = 0.23;
+
+CTFontRef sw_font(CGFloat sz) {
     CTFontRef base = CTFontCreateUIFontForLanguage(kCTFontUIFontSystem, sz, NULL);
-    if (!base || !weight) return base;
-    CFNumberRef w = CFNumberCreate(NULL, kCFNumberCGFloatType, &weight);
+    if (!base) return NULL;
+    CFNumberRef w = CFNumberCreate(NULL, kCFNumberCGFloatType, &FONT_WEIGHT);
     CFDictionaryRef traits = CFDictionaryCreate(NULL, (const void **)&kCTFontWeightTrait, (const void **)&w, 1,
                                                 &kCFTypeDictionaryKeyCallBacks, &kCFTypeDictionaryValueCallBacks);
     CFDictionaryRef attrs = CFDictionaryCreate(NULL, (const void **)&kCTFontTraitsAttribute, (const void **)&traits, 1,

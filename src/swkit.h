@@ -16,7 +16,7 @@ typedef struct {
 
 const palette_t *sw_palette(void); // by the system appearance right now
 
-CTFontRef sw_font(CGFloat size, CGFloat weight);
+CTFontRef sw_font(CGFloat size);
 void sw_color(CGContextRef c, uint32_t rgb, CGFloat a, bool stroke);
 uint32_t sw_mix(uint32_t fg, uint32_t bg, CGFloat t); // fg at t over bg
 bool sw_is_path(CFStringRef s);

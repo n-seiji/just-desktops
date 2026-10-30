@@ -11,7 +11,6 @@
 #include <malloc/malloc.h>
 #include <math.h>
 #include <stdio.h>
-#include <stdlib.h>
 
 // Square switcher. One glass square on the main display with one window shown large (its
 // screenshot, or its app icon until there is one), a counter and a row of dots. Like the list panel,
@@ -54,11 +53,7 @@
 #define MOVE_MS 340.0
 #define POOL 2 // the selected card and the one that just left
 #define CARD_RES 1 // the cards are drawn at 1x: 2x would add ~15MB at peak (the stage, the counter and the dots stay sharp)
-
-enum { F_HEADER, NFONTS };
-static const struct { CGFloat size, weight; } font_specs[NFONTS] = {
-    {14, 0.23},
-};
+#define HEADER_FONT 14
 
 typedef struct {
     uint32_t wid;
@@ -79,9 +74,8 @@ static int n;
 static long sel_v;
 static int last_dir;
 static bool thumbs, dark;
-static unsigned open_gen;
 static palette_t pal;
-static CTFontRef fonts[NFONTS];
+static CTFontRef font;
 static CGPoint so; // the stage's origin
 static dispatch_source_t timer;
 static double t0;
@@ -115,7 +109,7 @@ static void draw_stage(void) {
     char buf[32];
     snprintf(buf, sizeof buf, "Desktop %d", wm_current());
     CFStringRef s = CFStringCreateWithCString(NULL, buf, kCFStringEncodingUTF8);
-    sw_put(stage_ctx, sw_fit(fonts[F_HEADER], s, dim_text(), STAGE_W / 2, kCTLineTruncationEnd), INSET, HEADER_CY);
+    sw_put(stage_ctx, sw_fit(font, s, dim_text(), STAGE_W / 2, kCTLineTruncationEnd), INSET, HEADER_CY);
     CFRelease(s);
     finish(stage_ctx);
 }
@@ -126,7 +120,7 @@ static void draw_counter(void) {
     char buf[32];
     snprintf(buf, sizeof buf, "%d / %d", idx_of(sel_v) + 1, n);
     CFStringRef s = CFStringCreateWithCString(NULL, buf, kCFStringEncodingUTF8);
-    CTLineRef l = sw_fit(fonts[F_HEADER], s, dim_text(), COUNTER_W, kCTLineTruncationEnd);
+    CTLineRef l = sw_fit(font, s, dim_text(), COUNTER_W, kCTLineTruncationEnd);
     CGFloat w = CTLineGetTypographicBounds(l, NULL, NULL, NULL);
     sw_put(counter_ctx, l, COUNTER_W - w, COUNTER_H / 2);
     CFRelease(s);
@@ -209,10 +203,9 @@ static void request_thumb(int ci) {
     if (!thumbs) return;
     long v = cards[ci].v;
     if (ents[idx_of(v)].nopreview) return;
-    unsigned gen = open_gen;
     thumb_capture(ents[idx_of(v)].wid, ^(CGImageRef img) {
         card_t *k = &cards[ci];
-        if (gen != open_gen || !img || !k->used || k->v != v || k->shot) return;
+        if (!img || !k->used || k->v != v || k->shot) return;
         k->img = CGImageRetain(img);
         draw_card(k);
         CGImageRelease(k->img);
@@ -242,17 +235,12 @@ static void release_card(card_t *k) {
 static void close_cards(void) {
     sw_timer_stop(&timer);
     thumb_end();
-    open_gen++;
     for (int i = 0; i < POOL; i++) release_card(&cards[i]);
-    uint32_t *ws[] = {&stage, &counter, &dots};
-    CGContextRef *cs[] = {&stage_ctx, &counter_ctx, &dots_ctx};
-    for (int i = 0; i < 3; i++) {
-        sw_close_window(cid, ws[i], cs[i]);
-    }
-    for (int i = 0; i < NFONTS; i++) {
-        if (fonts[i]) CFRelease(fonts[i]);
-        fonts[i] = NULL;
-    }
+    sw_close_window(cid, &stage, &stage_ctx);
+    sw_close_window(cid, &counter, &counter_ctx);
+    sw_close_window(cid, &dots, &dots_ctx);
+    if (font) CFRelease(font);
+    font = NULL;
     sw_free_entries(ents, n);
     ents = NULL;
     n = 0;
@@ -338,18 +326,17 @@ static void open_cards(int dir) {
     dark = appearance_dark();
     pal = *sw_palette();
     if (dark) pal.tint_a = 0.82;
-    bool ok = true;
-    for (int i = 0; i < NFONTS; i++) ok = (fonts[i] = sw_font(font_specs[i].size, font_specs[i].weight)) && ok;
+    font = sw_font(HEADER_FONT);
     CGRect d = CGDisplayBounds(CGMainDisplayID());
     so = CGPointMake(d.origin.x + (d.size.width - STAGE_W) / 2, d.origin.y + (d.size.height - STAGE_H) / 2);
-    if (ok) {
+    if (font) {
         stage = sw_window(cid, so, (CGSize){STAGE_W, STAGE_H}, STAGE_R, BLUR, 2, &stage_ctx);
         counter = sw_window(cid, (CGPoint){so.x + STAGE_W - INSET - COUNTER_W, so.y + HEADER_CY - COUNTER_H / 2},
                             (CGSize){COUNTER_W, COUNTER_H}, 0, 0, 2, &counter_ctx);
         dots = sw_window(cid, (CGPoint){so.x + (STAGE_W - dots_w()) / 2, so.y + DOTS_CY - (DOT + 4) / 2},
                          (CGSize){dots_w(), DOT + 4}, 0, 0, 2, &dots_ctx);
     }
-    if (!ok || !stage || !counter || !stage_ctx || !counter_ctx || !dots || !dots_ctx) {
+    if (!font || !stage || !counter || !stage_ctx || !counter_ctx || !dots || !dots_ctx) {
         close_cards();
         return;
     }

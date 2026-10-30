@@ -224,11 +224,6 @@ static void visit(uint32_t wid) {
     }
 }
 
-static void refresh_ui_for(win_t *w) {
-    refresh_border(w);
-    wm_refresh_menubar(w);
-}
-
 // A call for a parked window is acted on after FOLLOW_DELAY_S, not at once. macOS focuses the app's other
 // window about 0.7 s before it reports that the focused one was minimized (closing and quitting are likely
 // the same), so at the notice the cause is not yet known. Only the newest call runs: any later focus
@@ -338,7 +333,7 @@ static void on_focus(bool recheck) {
         }
         // During the quiet period or at its recheck, input that calls a window up makes this a call, not macOS's doing.
         bool user_call = (settling || recheck) && called_by_user(t);
-        switch (focus_act(true, settling, recheck, w->wid == stale, first_in(cur_ws) != NULL, user_call)) {
+        switch (focus_act(settling, recheck, w->wid == stale, first_in(cur_ws) != NULL, user_call)) {
         case FOCUS_REFOCUS:
             log_focus(w, "refocus", cur_ws);
             focus_in_current();
@@ -360,7 +355,8 @@ static void on_focus(bool recheck) {
         if (w->ws != WS_EVERY) last_focus[cur_ws] = w->wid;
         visit(w->wid);
     }
-    refresh_ui_for(w);
+    refresh_border(w);
+    wm_refresh_menubar(w);
 }
 
 void wm_on_focus(void) { on_focus(false); }
