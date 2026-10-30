@@ -1,7 +1,6 @@
 #import <AppKit/AppKit.h>
 #include "menubar_priv.h"
 #include "app.h"
-#include "config.h"
 
 // The menu of a right or control click on the item, and of every click in icon mode. The settings
 // rewrite one line of the config file and restart (app_set); the bare binary keeps its one-item menu.
@@ -40,20 +39,18 @@
 
 static JDMenuActions *actions;
 
-static NSMenuItem *add_item(NSMenu *m, NSString *title, SEL action, NSControlStateValue state, NSString *key, NSString *value) {
+static void add_item(NSMenu *m, NSString *title, SEL action, NSControlStateValue state, NSString *key, NSString *value) {
     NSMenuItem *it = [m addItemWithTitle:title action:action keyEquivalent:@""];
     it.target = actions;
     it.state = state;
     if (key) it.representedObject = @[ key, value ];
-    return it;
 }
 
-static NSMenuItem *add_choice(NSMenu *m, NSString *title, bool current, NSString *key, NSString *value) {
-    return add_item(m, title, @selector(set:), current ? NSControlStateValueOn : NSControlStateValueOff, key, value);
+static void add_choice(NSMenu *m, NSString *title, bool current, NSString *key, NSString *value) {
+    add_item(m, title, @selector(set:), current ? NSControlStateValueOn : NSControlStateValueOff, key, value);
 }
 
 // Built on every open, so the checks match the settings in force and the login item's state.
-// The bare binary keeps its one-item menu; the rest is for the app.
 NSMenu *menubar_menu(menubar_mode_t mode) {
     if (!actions) actions = [JDMenuActions new];
     NSMenu *m = [NSMenu new];

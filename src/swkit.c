@@ -11,10 +11,12 @@ const palette_t *sw_palette(void) {
     return appearance_dark() ? &DARK : &LIGHT;
 }
 
-CTFontRef sw_font(CGFloat sz, CGFloat weight) {
+static const CGFloat FONT_WEIGHT = 0.23;
+
+CTFontRef sw_font(CGFloat sz) {
     CTFontRef base = CTFontCreateUIFontForLanguage(kCTFontUIFontSystem, sz, NULL);
-    if (!base || !weight) return base;
-    CFNumberRef w = CFNumberCreate(NULL, kCFNumberCGFloatType, &weight);
+    if (!base) return NULL;
+    CFNumberRef w = CFNumberCreate(NULL, kCFNumberCGFloatType, &FONT_WEIGHT);
     CFDictionaryRef traits = CFDictionaryCreate(NULL, (const void **)&kCTFontWeightTrait, (const void **)&w, 1,
                                                 &kCFTypeDictionaryKeyCallBacks, &kCFTypeDictionaryValueCallBacks);
     CFDictionaryRef attrs = CFDictionaryCreate(NULL, (const void **)&kCTFontTraitsAttribute, (const void **)&traits, 1,
@@ -70,6 +72,19 @@ void sw_put(CGContextRef c, CTLineRef l, CGFloat x, CGFloat cy) {
     CFRelease(l);
 }
 
+void sw_begin(CGContextRef c, CGSize sz) {
+    CGContextClearRect(c, (CGRect){{0, 0}, sz});
+    CGContextSaveGState(c);
+    CGContextTranslateCTM(c, 0, sz.height);
+    CGContextScaleCTM(c, 1, -1);
+    CGContextSetTextMatrix(c, CGAffineTransformMakeScale(1, -1));
+}
+
+void sw_finish(CGContextRef c) {
+    CGContextRestoreGState(c);
+    CGContextFlush(c);
+}
+
 static CGPathRef rrect(CGFloat x, CGFloat y, CGFloat w, CGFloat h, CGFloat r) {
     return CGPathCreateWithRoundedRect((CGRect){{x, y}, {w, h}}, r, r, NULL);
 }
@@ -100,17 +115,6 @@ void sw_edge_rrect(CGContextRef c, CGRect r, CGFloat radius, const palette_t *pa
     CGColorSpaceRelease(cs);
     CGContextRestoreGState(c);
     CGPathRelease(p);
-}
-
-bool sw_is_path(CFStringRef s) {
-    return CFStringHasPrefix(s, CFSTR("~/")) || CFStringHasPrefix(s, CFSTR("/"));
-}
-
-uint32_t sw_mix(uint32_t fg, uint32_t bg, CGFloat t) {
-    uint32_t out = 0;
-    for (int sh = 16; sh >= 0; sh -= 8)
-        out |= (uint32_t)lround(((fg >> sh & 255) * t) + ((bg >> sh & 255) * (1 - t))) << sh;
-    return out;
 }
 
 // The panel's shape: horizontal half-point strips approximating the rounded rect, so the
@@ -154,7 +158,9 @@ void sw_timer_stop(dispatch_source_t *t) {
     *t = NULL;
 }
 
-uint32_t sw_window(int cid, CGPoint at, CGSize sz, CGFloat radius, int blur, double res, CGContextRef *out) {
+#define BLUR 30
+
+uint32_t sw_window(int cid, CGPoint at, CGSize sz, CGFloat radius, double res, CGContextRef *out) {
     CGRect r = {{0, 0}, sz};
     CFTypeRef region = NULL;
     CGSNewRegionWithRect(&r, &region);
@@ -172,8 +178,8 @@ uint32_t sw_window(int cid, CGPoint at, CGSize sz, CGFloat radius, int blur, dou
         CFTypeRef shape = rounded_region(sz, radius);
         SLSSetWindowShape(cid, w, 0, 0, shape);
         CFRelease(shape);
+        SLSSetWindowBackgroundBlurRadius(cid, w, BLUR);
     }
-    if (blur) SLSSetWindowBackgroundBlurRadius(cid, w, blur);
     *out = SLWindowContextCreate(cid, w, NULL);
     return w;
 }

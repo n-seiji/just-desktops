@@ -10,7 +10,7 @@
 // surface alive after it closes.)
 enum { ROW_H = 28, ROW_PAD = 6, ROW_ICON = 18, ROW_W = 280, MAX_ROWS = 14, ARROW = 7, CORNER = 10 };
 
-static double overflow_closed_at; // a click on the item closes the panel on mouse down, before the action runs
+static double overflow_closed_at;
 
 @interface JDRows : NSView {
     @public

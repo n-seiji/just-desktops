@@ -24,7 +24,7 @@ bool thumb_ready(void) {
     return false;
 }
 
-static void capture(uint32_t wid, void (^done)(CGImageRef), unsigned gen) API_AVAILABLE(macos(14.0)) {
+static void capture(uint32_t wid, void (^done)(CGImageRef)) API_AVAILABLE(macos(14.0)) {
     SCWindow *win = nil;
     for (SCWindow *w in ((SCShareableContent *)content).windows) {
         if (w.windowID == wid) {
@@ -44,6 +44,7 @@ static void capture(uint32_t wid, void (^done)(CGImageRef), unsigned gen) API_AV
     cfg.showsCursor = NO;
     cfg.ignoreShadowsSingleWindow = YES;
     SCContentFilter *filter = [[SCContentFilter alloc] initWithDesktopIndependentWindow:win];
+    unsigned gen = generation;
     [SCScreenshotManager captureImageWithFilter:filter configuration:cfg completionHandler:^(CGImageRef img, NSError *err) {
         (void)err;
         CGImageRef keep = img ? CGImageRetain(img) : NULL;
@@ -68,7 +69,7 @@ void thumb_begin(void) {
                 content = c;
                 NSArray *queued = pending;
                 pending = nil;
-                for (NSArray *req in queued) capture((uint32_t)[req[0] unsignedIntValue], req[1], gen);
+                for (NSArray *req in queued) capture((uint32_t)[req[0] unsignedIntValue], req[1]);
             });
         }];
     }
@@ -77,7 +78,7 @@ void thumb_begin(void) {
 void thumb_capture(uint32_t wid, void (^done)(CGImageRef img)) {
     if (@available(macOS 14.0, *)) {
         if (content) {
-            capture(wid, done, generation);
+            capture(wid, done);
             return;
         }
         if (pending) {

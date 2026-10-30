@@ -1,7 +1,6 @@
 #include "follow.h"
 
-focus_act_t focus_act(bool parked, bool settling, bool recheck, bool is_stale, bool cur_has_win, bool user_call) {
-    if (!parked) return FOCUS_RECORD;
+focus_act_t focus_act(bool settling, bool recheck, bool is_stale, bool cur_has_win, bool user_call) {
     if (user_call && !is_stale) return FOCUS_FOLLOW;
     if (settling || is_stale) return FOCUS_IGNORE;
     if (recheck) return cur_has_win ? FOCUS_REFOCUS : FOCUS_STALE;

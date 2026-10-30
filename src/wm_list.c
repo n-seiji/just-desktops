@@ -46,13 +46,14 @@ static void label_entries(sw_entry_t *list, int n) {
     free(titles);
 }
 
-// WindowServer's view of the windows that are really shown right now: on screen, not
-// transparent, and with a visible part on a display. NULL when the list is unavailable.
+// WindowServer's list of the windows on screen right now. NULL when it is unavailable.
 static CFArrayRef shown_windows(void) {
     return CGWindowListCopyWindowInfo(kCGWindowListOptionOnScreenOnly | kCGWindowListExcludeDesktopElements,
                                       kCGNullWindowID);
 }
 
+// Whether wid is really shown: in that list, not transparent, and with a visible part on a display (so not
+// a hidden app's window, one on another Space, alpha 0 or off screen). True when the list is unavailable.
 static bool is_shown(CFArrayRef shown, uint32_t wid) {
     if (!shown) return true;
     CGDirectDisplayID ds[8];
@@ -76,10 +77,9 @@ static bool is_shown(CFArrayRef shown, uint32_t wid) {
     return false;
 }
 
-// On this desktop, not minimized or parked, and shown by WindowServer (not a hidden app, another
-// Space, alpha 0 or off screen).
-static bool switchable(win_t *w, CFArrayRef shown) {
-    return wm_here(w) && !w->hidden && !w->minimized && is_shown(shown, w->wid);
+// On this desktop, not minimized or parked.
+static bool on_desk(const win_t *w) {
+    return wm_here(w) && !w->hidden && !w->minimized;
 }
 
 // The switchable windows in menu bar order: see order_group. pids and wids need room for nwins
@@ -93,7 +93,7 @@ static int switch_order(const win_t *f, pid_t *pids, uint32_t *wids, int *at) {
         n = 0;
         CFArrayRef shown = shown_windows();
         for (int i = 0; i < nwins; i++) {
-            if (!switchable(&wins[i], shown)) continue;
+            if (!on_desk(&wins[i]) || !is_shown(shown, wins[i].wid)) continue;
             tpid[n] = wins[i].pid;
             twid[n++] = wins[i].wid;
         }
@@ -175,7 +175,7 @@ static int menubar_order(pid_t *pids, uint32_t *wids) {
     CFArrayRef shown = shown_windows();
     for (int i = 0; i < nwins && nv < JD_MENUBAR_WINS; i++) {
         win_t *w = &wins[i];
-        if (!wm_here(w) || w->hidden || w->minimized) continue;
+        if (!on_desk(w)) continue;
         if (!shown_grace(is_shown(shown, w->wid), &w->was_listed, now, w->shown_at)) continue;
         vpid[nv] = w->pid;
         vwid[nv++] = w->wid;

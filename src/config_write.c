@@ -83,11 +83,13 @@ char *config_set(const char *text, const char *key, const char *value) {
     return out;
 }
 
-static int mkdirs(char *path) {
-    for (char *p = path + 1; *p; p++) {
+static int mkdirs(const char *path) {
+    char dir[PATH_MAX];
+    snprintf(dir, sizeof dir, "%s", path);
+    for (char *p = dir + 1; *p; p++) {
         if (*p != '/') continue;
         *p = 0;
-        int r = mkdir(path, 0755);
+        int r = mkdir(dir, 0755);
         *p = '/';
         if (r != 0 && errno != EEXIST) return -1;
     }
@@ -135,9 +137,7 @@ static char *slurp(const char *path) {
 }
 
 int config_write_key(const char *path, const char *key, const char *value) {
-    char dir[PATH_MAX];
-    snprintf(dir, sizeof dir, "%s", path);
-    if (mkdirs(dir) != 0) return -1;
+    if (mkdirs(path) != 0) return -1;
     char *old = slurp(path);
     if (!old) return -1;
     char *text = config_set(old, key, value);
@@ -150,8 +150,6 @@ int config_write_key(const char *path, const char *key, const char *value) {
 
 int config_ensure_file(const char *path) {
     if (access(path, F_OK) == 0) return 0;
-    char dir[PATH_MAX];
-    snprintf(dir, sizeof dir, "%s", path);
-    if (mkdirs(dir) != 0) return -1;
+    if (mkdirs(path) != 0) return -1;
     return write_atomic(path, sample);
 }

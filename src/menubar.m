@@ -146,8 +146,8 @@ static void draw_app(CGContextRef c, CGRect slot, CGImageRef mask, bool focused)
     CGContextSetBlendMode(c, kCGBlendModeNormal);
 }
 
-static void render(int ws, const pid_t *pids, const uint32_t *wids, int n, int over, uint32_t front) {
-    int slots = strip_slots(n, over);
+static void render(void) {
+    int slots = strip_slots(last_n, last_over);
     int width = strip_width(reserve);
     int left = width - strip_width(slots); // the strip is right-aligned
     CGColorSpaceRef cs = CGColorSpaceCreateDeviceRGB();
@@ -160,12 +160,12 @@ static void render(int ws, const pid_t *pids, const uint32_t *wids, int n, int o
     CGContextSetGrayFillColor(c, 1, 1);
     CGContextSetGrayStrokeColor(c, 1, 1);
 
-    for (int i = 0; i < n; i++) {
+    for (int i = 0; i < last_n; i++) {
         CGRect slot = CGRectMake(left + i * (STRIP_SLOT + STRIP_GAP), (HEIGHT - STRIP_SLOT) / 2.0, STRIP_SLOT, STRIP_SLOT);
-        draw_app(c, slot, menubar_mask(pids[i]), wids[i] == front);
+        draw_app(c, slot, menubar_mask(last_pids[i]), last_wids[i] == last_front);
     }
-    if (over > 0) draw_more(c, left + n * (STRIP_SLOT + STRIP_GAP), over);
-    draw_key(c, left + slots * (STRIP_SLOT + STRIP_GAP), config_key_char(ws - 1));
+    if (last_over > 0) draw_more(c, left + last_n * (STRIP_SLOT + STRIP_GAP), last_over);
+    draw_key(c, left + slots * (STRIP_SLOT + STRIP_GAP), config_key_char(last_ws - 1));
 
     CGImageRef strip = CGBitmapContextCreateImage(c);
     CGContextRelease(c);
@@ -175,10 +175,10 @@ static void render(int ws, const pid_t *pids, const uint32_t *wids, int n, int o
     item.button.image = img;
 }
 
-// The last strip again, e.g. after the reserve shrank.
+// Draws the strip held in last_*: a new one, or the same again after the reserve shrank.
 static void redraw(void) {
     @autoreleasepool {
-        render(last_ws, last_pids, last_wids, last_n, last_over, last_front);
+        render();
     }
 }
 
@@ -195,10 +195,8 @@ void menubar_init(menubar_mode_t m) {
     if (mode == MB_ICON) item.button.image = icon_image();
 }
 
-// over_hash identifies the windows counted in over. n windows get a glyph (pids[i] owns wids[i]); over more are only counted. front is the
-// focused window's id, 0 for none.
 void menubar_update(int ws, const pid_t *pids, const uint32_t *wids, int n, int over, uint32_t over_hash, uint32_t front) {
-    if (!item || mode != MB_STRIP) return;
+    if (!menubar_ready()) return;
     if (n > JD_MENUBAR_SLOTS) n = JD_MENUBAR_SLOTS;
     bool same_set = ws == last_ws && n == last_n && over == last_over && over_hash == last_hash &&
                     !memcmp(pids, last_pids, sizeof *pids * n) && !memcmp(wids, last_wids, sizeof *wids * n);
@@ -225,9 +223,7 @@ void menubar_update(int ws, const pid_t *pids, const uint32_t *wids, int n, int 
     last_front = front;
     memcpy(last_pids, pids, sizeof *pids * n);
     memcpy(last_wids, wids, sizeof *wids * n);
-    @autoreleasepool {
-        render(ws, pids, wids, n, over, front);
-    }
+    redraw();
 }
 
 bool menubar_ready(void) {

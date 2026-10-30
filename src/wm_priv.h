@@ -9,7 +9,7 @@ typedef struct {
     int ws;
     CGPoint saved;
     bool hidden;
-    double shown_at; // when wm_show last unparked it
+    double shown_at; // when show last unparked it
     bool was_listed; // WindowServer listed it the last time we looked
     bool minimized;  // kept from the (de)miniaturize notifications: asking a hung app costs a timeout per window
 } win_t;
