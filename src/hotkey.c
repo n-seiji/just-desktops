@@ -29,6 +29,8 @@ static CGEventFlags base; // the configured base modifier
 static bool armed; // switcher open (or about to be): ⌥ is held since a Tab
 static bool step_pending; // see keyrules_step_allowed: the rest of a held Tab's repeats are swallowed
 static uint64_t last_step_ns;
+static double last_call_key;
+static double last_quick_key;
 
 static void commit(void) {
     armed = false;
@@ -39,9 +41,6 @@ static void cancel(void) {
     armed = false;
     dispatch_async(dispatch_get_main_queue(), ^{ switcher_cancel(); });
 }
-
-static double last_call_key;
-static double last_quick_key;
 
 double hotkey_last_call_key(void) { return last_call_key; }
 double hotkey_last_quick_key(void) { return last_quick_key; }
@@ -59,28 +58,27 @@ static CGEventRef on_key(CGEventTapProxy proxy, CGEventType type, CGEventRef ev,
         return ev;
     }
     if (type != kCGEventKeyDown) return ev;
+    int64_t key = CGEventGetIntegerValueField(ev, kCGKeyboardEventKeycode);
+    bool repeat = CGEventGetIntegerValueField(ev, kCGKeyboardEventAutorepeat) != 0;
+    CGEventFlags flags = CGEventGetFlags(ev);
     // Before any early return, so Cmd-Tab and other apps' shortcuts are seen. Typing (no modifier, or only Shift)
     // and held-down repeats are not calls.
-    if (CGEventGetIntegerValueField(ev, kCGKeyboardEventAutorepeat) == 0) {
-        int64_t code = CGEventGetIntegerValueField(ev, kCGKeyboardEventKeycode);
-        bool shortcut = CGEventGetFlags(ev) & (kCGEventFlagMaskCommand | kCGEventFlagMaskControl | kCGEventFlagMaskAlternate);
+    if (!repeat) {
+        bool shortcut = flags & (kCGEventFlagMaskCommand | kCGEventFlagMaskControl | kCGEventFlagMaskAlternate);
         double now = CFAbsoluteTimeGetCurrent();
-        if (code == KEY_RETURN || code == KEY_ENTER || shortcut) last_call_key = now;
+        if (key == KEY_RETURN || key == KEY_ENTER || shortcut) last_call_key = now;
         // Every key replaces the last, so a ⌘W after a shortcut cancels it. Close, quit, minimize and hide move focus.
-        bool leave = (CGEventGetFlags(ev) & kCGEventFlagMaskCommand) && (code == KEY_W || code == KEY_Q || code == KEY_M || code == KEY_H);
+        bool leave = (flags & kCGEventFlagMaskCommand) && (key == KEY_W || key == KEY_Q || key == KEY_M || key == KEY_H);
         last_quick_key = shortcut && !leave ? now : 0;
     }
-    if (armed && CGEventGetIntegerValueField(ev, kCGKeyboardEventKeycode) == KEY_ESC) {
+    if (armed && key == KEY_ESC) {
         cancel();
         return NULL;
     }
 
-    mods_t mods = keyrules_mods(CGEventGetFlags(ev), base);
+    mods_t mods = keyrules_mods(flags, base);
     if (mods == MODS_OTHER) return ev;
     bool alt = mods == MODS_BASE;
-
-    int64_t key = CGEventGetIntegerValueField(ev, kCGKeyboardEventKeycode);
-    bool repeat = CGEventGetIntegerValueField(ev, kCGKeyboardEventAutorepeat) != 0;
 
     if (key == KEY_TAB) {
         int dir = alt ? 1 : -1;

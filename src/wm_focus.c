@@ -199,6 +199,10 @@ void wm_refresh_ui(void) {
 
 // ---- focus and desktop changes ----
 
+static void run_after(double seconds, dispatch_block_t block) {
+    dispatch_after(dispatch_time(DISPATCH_TIME_NOW, seconds * NSEC_PER_SEC), dispatch_get_main_queue(), block);
+}
+
 // While settling, a parked window that takes focus is left alone, so nothing would look at it again once the
 // quiet period ends. One check per quiet period is queued for then; only the newest one runs.
 static unsigned recheck_gen;
@@ -207,7 +211,7 @@ static void on_focus(bool recheck);
 static void recheck_after_settle(void) {
     unsigned gen = ++recheck_gen;
     double wait = settle_until - CFAbsoluteTimeGetCurrent() + 0.02;
-    dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (wait > 0 ? wait : 0) * NSEC_PER_SEC), dispatch_get_main_queue(), ^{
+    run_after(wait > 0 ? wait : 0, ^{
         if (gen != recheck_gen) return;
         trigger = "recheck";
         on_focus(true);
@@ -295,26 +299,28 @@ static void follow_check_now(uint32_t wid, const char *why, bool user_call) {
 static void follow_later(uint32_t wid, bool user_call) {
     unsigned gen = ++follow_gen;
     const char *why = trigger;
-    dispatch_after(dispatch_time(DISPATCH_TIME_NOW, FOLLOW_DELAY_S * NSEC_PER_SEC), dispatch_get_main_queue(), ^{
+    run_after(FOLLOW_DELAY_S, ^{
         if (gen == follow_gen) follow_check_now(wid, why, user_call);
     });
 }
 
-// A mouse click, Return / Enter or a shortcut (Cmd-Tab, an app's own key) just before now, after the quiet period began: the user called this window.
-static bool called_by_user(double now) {
+// Seconds since the last left or right mouse click.
+static double last_click_ago(void) {
     double click = CGEventSourceSecondsSinceLastEventType(kCGEventSourceStateHIDSystemState, kCGEventLeftMouseDown);
     double rclick = CGEventSourceSecondsSinceLastEventType(kCGEventSourceStateHIDSystemState, kCGEventRightMouseDown);
-    if (rclick < click) click = rclick;
-    double at = now - click, key = hotkey_last_call_key();
+    return rclick < click ? rclick : click;
+}
+
+// A mouse click, Return / Enter or a shortcut (Cmd-Tab, an app's own key) just before now, after the quiet period began: the user called this window.
+static bool called_by_user(double now) {
+    double at = now - last_click_ago(), key = hotkey_last_call_key();
     return input_is_call(at > key ? at : key, settle_start, now);
 }
 
 // A shortcut other than close, quit, minimize or hide just before now, with no click since: switch without waiting.
 static bool quick_call(double now) {
-    double click = CGEventSourceSecondsSinceLastEventType(kCGEventSourceStateHIDSystemState, kCGEventLeftMouseDown);
-    double rclick = CGEventSourceSecondsSinceLastEventType(kCGEventSourceStateHIDSystemState, kCGEventRightMouseDown);
-    if (rclick < click) click = rclick;
-    return input_is_quick_call(hotkey_last_quick_key(), now - click, now);
+    double click_at = now - last_click_ago();
+    return input_is_quick_call(hotkey_last_quick_key(), click_at, now);
 }
 
 static void on_focus(bool recheck) {
@@ -364,7 +370,7 @@ void wm_on_focus(void) { on_focus(false); }
 // WindowServer may not list the windows just shown or focused as on screen yet: check again once it does.
 static void refresh_menubar_later(void) {
     if (!menubar_ready()) return;
-    dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (FRESH_S + 0.05) * NSEC_PER_SEC), dispatch_get_main_queue(), ^{ wm_refresh_menubar(wm_focused()); });
+    run_after(FRESH_S + 0.05, ^{ wm_refresh_menubar(wm_focused()); });
 }
 
 // Apps set to `none` leave with the desktop, except one with no window tracked. Called inside wm_switch, so the
@@ -384,6 +390,14 @@ static void hide_every(void) {
         if (every_app(apps[i].pid) && apps_hide(apps[i].pid)) log_hide(apps[i].pid);
 }
 
+// t is the window focused after the change, or NULL.
+static void finish_change(const win_t *t) {
+    wm_settle();
+    wm_mark_fresh(t ? t->wid : 0, settle_start);
+    wm_refresh_ui();
+    refresh_menubar_later();
+}
+
 void wm_switch(int ws) {
     if (ws < 1 || ws > config_workspaces() || ws == cur_ws) return;
     follow_gen++;
@@ -400,10 +414,7 @@ void wm_switch(int ws) {
 
     win_t *t = focus_in_current();
     hide_every();
-    wm_settle();
-    wm_mark_fresh(t ? t->wid : 0, settle_start);
-    wm_refresh_ui();
-    refresh_menubar_later();
+    finish_change(t);
 }
 
 void wm_dismiss_every(void) {
@@ -412,10 +423,7 @@ void wm_dismiss_every(void) {
     trigger = "hotkey";
     win_t *t = focus_in_current();
     if (apps_hide(pid)) log_hide(pid);
-    wm_settle();
-    wm_mark_fresh(t ? t->wid : 0, settle_start);
-    wm_refresh_ui();
-    refresh_menubar_later();
+    finish_change(t);
 }
 
 void wm_move_focused(int ws) {
@@ -483,7 +491,7 @@ void wm_history(int dir) {
     hold_until = CFAbsoluteTimeGetCurrent() + SETTLE_S;
     // If focusing wid fails, a window clicked meanwhile must still be recorded once the hold ends.
     unsigned gen = ++history_gen;
-    dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (SETTLE_S + 0.02) * NSEC_PER_SEC), dispatch_get_main_queue(), ^{
+    run_after(SETTLE_S + 0.02, ^{
         if (gen == history_gen) wm_on_focus();
     });
     if (!wm_here(w)) {

@@ -31,7 +31,6 @@
 #define ROW_RADIUS 12.0
 #define ICON 28.0
 #define ICON_GAP 14.0
-#define BLUR 30
 #define MAX_ROWS 9
 #define SLIDE_MS 120.0
 #define SHOW_DELAY_MS 150 // the panel appears only after ⌥ has been held this long since the first Tab
@@ -51,6 +50,15 @@ static const palette_t *pal;
 static CGSize size;
 static CGPoint origin;
 static double pos, from_pos, t0;
+
+// The row text of an entry: its cleaned title, or the app name when there is none.
+static CFStringRef sw_text(const sw_entry_t *e) {
+    return e->title ? e->title : e->app;
+}
+
+static bool sw_is_path(CFStringRef s) {
+    return CFStringHasPrefix(s, CFSTR("~/")) || CFStringHasPrefix(s, CFSTR("/"));
+}
 
 // The panel's width: the widest title plus the row's padding, within MIN_W..MAX_W.
 static CGFloat fit_width(void) {
@@ -88,21 +96,17 @@ static void draw_row(CGContextRef c, sw_entry_t *e, CGFloat y) {
     sw_put(c, sw_fit(fonts[F_ROW], main, pal->title, right - left, sw_is_path(main) ? kCTLineTruncationStart : kCTLineTruncationEnd), left, cy);
 }
 
-// All of the panel's looks live here. Below the first line the context is y-down.
+// All of the panel's looks live here. Between sw_begin and sw_finish the context is y-down.
 static void draw(CGContextRef c) {
     CGRect all = {{0, 0}, size};
-    CGContextClearRect(c, all);
-    CGContextSaveGState(c);
-    CGContextTranslateCTM(c, 0, size.height);
-    CGContextScaleCTM(c, 1, -1);
-    CGContextSetTextMatrix(c, CGAffineTransformMakeScale(1, -1));
+    sw_begin(c, size);
 
     sw_fill_rrect(c, all, RADIUS, pal->tint, pal->tint_a);
     sw_edge_rrect(c, all, RADIUS, pal);
 
     draw_header(c);
     for (int r = 0; r < rows; r++) draw_row(c, &ents[top + r], HEADER_H + r * ROW_H);
-    CGContextRestoreGState(c);
+    sw_finish(c);
 }
 
 static CGSize hl_size(void) {
@@ -113,10 +117,7 @@ static CGSize hl_size(void) {
 static void draw_highlight(CGContextRef c) {
     CGSize sz = hl_size();
     CGFloat br = hl_last ? RADIUS - ROW_INSET : ROW_RADIUS;
-    CGContextClearRect(c, (CGRect){{0, 0}, sz});
-    CGContextSaveGState(c);
-    CGContextTranslateCTM(c, 0, sz.height);
-    CGContextScaleCTM(c, 1, -1);
+    sw_begin(c, sz);
     CGContextMoveToPoint(c, ROW_RADIUS, 0);
     CGContextAddArcToPoint(c, sz.width, 0, sz.width, br, ROW_RADIUS);
     CGContextAddArcToPoint(c, sz.width, sz.height, sz.width - br, sz.height, br);
@@ -125,7 +126,7 @@ static void draw_highlight(CGContextRef c) {
     CGContextClosePath(c);
     sw_color(c, pal->highlight, pal->highlight_a, false);
     CGContextFillPath(c);
-    CGContextRestoreGState(c);
+    sw_finish(c);
 }
 
 static CGPoint hl_origin(void) {
@@ -176,17 +177,15 @@ static void open_panel(int dir) {
     CGRect d = CGDisplayBounds(CGMainDisplayID());
     origin = CGPointMake(d.origin.x + (d.size.width - size.width) / 2, d.origin.y + (d.size.height - size.height) / 2);
     hl_last = sel - top == rows - 1;
-    wid = sw_window(cid, origin, size, RADIUS, BLUR, 2, &ctx);
+    wid = sw_window(cid, origin, size, RADIUS, 2, &ctx);
     CGPoint o = hl_origin();
-    hwid = wid ? sw_window(cid, o, hl_size(), 0, 0, 2, &hctx) : 0;
+    hwid = wid ? sw_window(cid, o, hl_size(), 0, 2, &hctx) : 0;
     if (!hwid || !ctx || !hctx) {
         close_panel();
         return;
     }
     draw(ctx);
-    CGContextFlush(ctx);
     draw_highlight(hctx);
-    CGContextFlush(hctx);
     SLSOrderWindow(cid, wid, 1, 0);
     SLSOrderWindow(cid, hwid, 1, wid);
 }
@@ -204,15 +203,11 @@ static void panel_step(int dir) {
     sel = sel_wrap(sel + dir, n);
     int old = top;
     top = sel_top(top, sel, rows);
-    if (top != old) {
-        draw(ctx);
-        CGContextFlush(ctx);
-    }
+    if (top != old) draw(ctx);
     bool last = sel - top == rows - 1;
     if (last != hl_last) {
         hl_last = last;
         draw_highlight(hctx);
-        CGContextFlush(hctx);
     }
     t0 = CFAbsoluteTimeGetCurrent();
     sw_timer_start(&timer, tick);
