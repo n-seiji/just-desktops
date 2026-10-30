@@ -19,6 +19,10 @@
 #define KEY_ENTER 0x4C
 #define KEY_LBRACKET 0x21
 #define KEY_RBRACKET 0x1E
+#define KEY_W 0x0D
+#define KEY_Q 0x0C
+#define KEY_M 0x2E
+#define KEY_H 0x04
 
 static CFMachPortRef tap;
 static CGEventFlags base; // the configured base modifier
@@ -37,8 +41,10 @@ static void cancel(void) {
 }
 
 static double last_call_key;
+static double last_quick_key;
 
 double hotkey_last_call_key(void) { return last_call_key; }
+double hotkey_last_quick_key(void) { return last_quick_key; }
 
 static CGEventRef on_key(CGEventTapProxy proxy, CGEventType type, CGEventRef ev, void *ctx) {
     (void)proxy; (void)ctx;
@@ -58,7 +64,11 @@ static CGEventRef on_key(CGEventTapProxy proxy, CGEventType type, CGEventRef ev,
     if (CGEventGetIntegerValueField(ev, kCGKeyboardEventAutorepeat) == 0) {
         int64_t code = CGEventGetIntegerValueField(ev, kCGKeyboardEventKeycode);
         bool shortcut = CGEventGetFlags(ev) & (kCGEventFlagMaskCommand | kCGEventFlagMaskControl | kCGEventFlagMaskAlternate);
-        if (code == KEY_RETURN || code == KEY_ENTER || shortcut) last_call_key = CFAbsoluteTimeGetCurrent();
+        double now = CFAbsoluteTimeGetCurrent();
+        if (code == KEY_RETURN || code == KEY_ENTER || shortcut) last_call_key = now;
+        // Every key replaces the last, so a ⌘W after a shortcut cancels it. Close, quit, minimize and hide move focus.
+        bool leave = (CGEventGetFlags(ev) & kCGEventFlagMaskCommand) && (code == KEY_W || code == KEY_Q || code == KEY_M || code == KEY_H);
+        last_quick_key = shortcut && !leave ? now : 0;
     }
     if (armed && CGEventGetIntegerValueField(ev, kCGKeyboardEventKeycode) == KEY_ESC) {
         cancel();

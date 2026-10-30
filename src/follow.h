@@ -19,6 +19,11 @@ focus_act_t focus_act(bool parked, bool settling, bool recheck, bool is_stale, b
 #define CALL_INPUT_S 1.0
 bool input_is_call(double at, double settle_start, double now);
 
+// Whether the shortcut at key_at (0 if none) is fresh enough, at most QUICK_CALL_S before now, to switch without
+// waiting. A click after the key cancels it: the click may be a close button, which moves focus.
+#define QUICK_CALL_S 1.0
+bool input_is_quick_call(double key_at, double click_at, double now);
+
 typedef enum {
     FOLLOW_DROP,   // the call is over or handled elsewhere: do nothing
     FOLLOW_WAIT,   // a quiet period started meanwhile: the focus is dealt with when it ends

@@ -232,7 +232,7 @@ static void refresh_ui_for(win_t *w) {
 // A call for a parked window is acted on after FOLLOW_DELAY_S, not at once. macOS focuses the app's other
 // window about 0.7 s before it reports that the focused one was minimized (closing and quitting are likely
 // the same), so at the notice the cause is not yet known. Only the newest call runs: any later focus
-// event or desktop switch cancels it.
+// event or desktop switch cancels it. A fresh shortcut (see quick_call) skips the wait.
 #define FOLLOW_DELAY_S 0.3
 static unsigned follow_gen;
 
@@ -314,13 +314,21 @@ static bool called_by_user(double now) {
     return input_is_call(at > key ? at : key, settle_start, now);
 }
 
+// A shortcut other than close, quit, minimize or hide just before now, with no click since: switch without waiting.
+static bool quick_call(double now) {
+    double click = CGEventSourceSecondsSinceLastEventType(kCGEventSourceStateHIDSystemState, kCGEventLeftMouseDown);
+    double rclick = CGEventSourceSecondsSinceLastEventType(kCGEventSourceStateHIDSystemState, kCGEventRightMouseDown);
+    if (rclick < click) click = rclick;
+    return input_is_quick_call(hotkey_last_quick_key(), now - click, now);
+}
+
 static void on_focus(bool recheck) {
     follow_gen++; // a call still waiting is stale: this event decides again
     win_t *w = wm_focused();
     if (w && !wm_here(w)) {
         // A parked window took focus (Raycast, Cmd-Tab, Dock, a notification): go to its desktop (after
-        // FOLLOW_DELAY_S, see follow_later), unless macOS is still settling after a desktop change or a close,
-        // or it is the one we just parked.
+        // FOLLOW_DELAY_S, see follow_later; at once after a fresh shortcut), unless macOS is still settling after a
+        // desktop change or a close, or it is the one we just parked.
         double t = CFAbsoluteTimeGetCurrent();
         bool settling = t < settle_until;
         if (settling) {
@@ -340,7 +348,8 @@ static void on_focus(bool recheck) {
             last_focus[cur_ws] = 0; // nothing usable here: a later call must not be read as this desktop's window leaving
             return;
         case FOCUS_FOLLOW:
-            follow_later(w->wid, user_call);
+            if (quick_call(t)) follow_check_now(w->wid, trigger, user_call);
+            else follow_later(w->wid, user_call);
             return;
         default:
             return;
