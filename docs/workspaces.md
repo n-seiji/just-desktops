@@ -71,6 +71,7 @@ The border is a thin ring floating 3pt off the focused window, brighter along th
 - Its corners follow the window's own corner radius as WindowServer reports it (16pt for most windows, up to 26pt for newer styles). Without a reported radius it uses 16pt.
 - It is white in Dark mode and black in Light mode. It follows the system appearance and updates the moment that changes. The switcher panel has a light and a dark look too.
 - It is drawn through the private SkyLight framework, so no NSWindow is created.
+- It stays on its window while the panel of an accessory app such as Raycast or Spotlight has focus.
 - `border = off` creates no border window.
 
 ## Modifier
