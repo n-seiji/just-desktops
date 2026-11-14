@@ -42,6 +42,7 @@ com.googlecode.iterm2 = 2
 - A window of a pinned app is placed on its desktop when it first appears, and it is not switched to. This covers windows that exist when just-desktops starts and windows opened later.
 - A window that is focused when it appears, or that you focus later, switches to its desktop. Focusing a pinned app from another desktop takes you to its pin.
 - The pin is applied once, when the window first appears.
+- The last line for an app wins. A `#` starts a comment anywhere on a line, so `com.apple.Safari = 1 # browser` works. A value that is not `none` or a number from 1 to 10 is ignored with a warning on stderr; a misspelt setting name is read as a bundle id, so it warns the same way unless its value happens to be a number or `none`. The settings menu of the app rewrites a whole line, so a comment after `border`, `switcher` or `menubar` is dropped when you change that setting there.
 - A pin to a desktop number higher than the number of `keys` is ignored.
 
 ## Apps on every desktop
@@ -76,7 +77,7 @@ The border is a thin ring floating 3pt off the focused window, brighter along th
 
 ## Modifier
 
-`⌥` in these docs is the base modifier. Option is the default. Set `modifier = cmd` or `modifier = ctrl` for Command or Control. `option`, `alt`, `command` and `control` are accepted too, in any case. An unknown value gives Option.
+`⌥` in these docs is the base modifier. Option is the default. Set `modifier = cmd` or `modifier = ctrl` for Command or Control. `option`, `alt`, `command` and `control` are accepted too, in any case. An unknown value is ignored with a warning on stderr, and the setting stays at its default (Option) or an earlier valid line.
 
 Every hotkey follows it: the desktop keys, moving a window, `⌥[` and `⌥]`, the switcher, releasing it to commit, Esc and the desktop keys while the panel is open. The Shift variants stay.
 

@@ -70,9 +70,9 @@ NSMenu *menubar_menu(menubar_mode_t mode) {
         [m setSubmenu:mbs forItem:[m addItemWithTitle:@"Menu bar" action:nil keyEquivalent:@""]];
 
         [m addItem:NSMenuItem.separatorItem];
-        int login = app_login_state();
+        login_state_t login = app_login_state();
         add_item(m, @"Launch at Login", @selector(toggleLogin:),
-                 login == 1 ? NSControlStateValueOn : login == 2 ? NSControlStateValueMixed : NSControlStateValueOff, nil, nil);
+                 login == LOGIN_ON ? NSControlStateValueOn : login == LOGIN_NEEDS_APPROVAL ? NSControlStateValueMixed : NSControlStateValueOff, nil, nil);
         add_item(m, @"Open Config File", @selector(openConfig:), NSControlStateValueOff, nil, nil);
         [m addItem:NSMenuItem.separatorItem];
         add_item(m, [NSString stringWithFormat:@"About just-desktops %s", JD_VERSION], @selector(about:), NSControlStateValueOff, nil, nil);

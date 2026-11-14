@@ -52,14 +52,21 @@ static CFArrayRef shown_windows(void) {
                                       kCGNullWindowID);
 }
 
+typedef struct { CGRect r[8]; uint32_t n; } displays_t;
+
+// Read once per list build, not per window.
+static displays_t read_displays(void) {
+    displays_t d = {.n = 0};
+    CGDirectDisplayID ds[8];
+    CGGetActiveDisplayList(8, ds, &d.n);
+    for (uint32_t k = 0; k < d.n; k++) d.r[k] = CGDisplayBounds(ds[k]);
+    return d;
+}
+
 // Whether wid is really shown: in that list, not transparent, and with a visible part on a display (so not
 // a hidden app's window, one on another Space, alpha 0 or off screen). True when the list is unavailable.
-static bool is_shown(CFArrayRef shown, uint32_t wid) {
+static bool is_shown(CFArrayRef shown, const displays_t *ds, uint32_t wid) {
     if (!shown) return true;
-    CGDirectDisplayID ds[8];
-    uint32_t nd = 0;
-    CGGetActiveDisplayList(8, ds, &nd);
-    CGRect bounds[8];
     for (CFIndex i = 0; i < CFArrayGetCount(shown); i++) {
         CFDictionaryRef d = CFArrayGetValueAtIndex(shown, i);
         int num = 0;
@@ -71,8 +78,7 @@ static bool is_shown(CFArrayRef shown, uint32_t wid) {
         CGRect r;
         CFDictionaryRef b = CFDictionaryGetValue(d, kCGWindowBounds);
         if (alpha <= 0 || !b || !CGRectMakeWithDictionaryRepresentation(b, &r)) return false;
-        for (uint32_t k = 0; k < nd; k++) bounds[k] = CGDisplayBounds(ds[k]);
-        return shown_visible(alpha, r, bounds, nd);
+        return shown_visible(alpha, r, ds->r, ds->n);
     }
     return false;
 }
@@ -92,8 +98,9 @@ static int switch_order(const win_t *f, pid_t *pids, uint32_t *wids, int *at) {
     if (tpid && twid) {
         n = 0;
         CFArrayRef shown = shown_windows();
+        displays_t ds = read_displays();
         for (int i = 0; i < nwins; i++) {
-            if (!on_desk(&wins[i]) || !is_shown(shown, wins[i].wid)) continue;
+            if (!on_desk(&wins[i]) || !is_shown(shown, &ds, wins[i].wid)) continue;
             tpid[n] = wins[i].pid;
             twid[n++] = wins[i].wid;
         }
@@ -120,17 +127,35 @@ static sw_entry_t entry(uint32_t wid, pid_t pid, int icon_px) {
     return e;
 }
 
+// The switchable windows in menu bar order, as wm_windows and wm_window_ids list them. *pids and *wids are
+// malloc'd (at least 1 slot) and the caller frees them; *sel is the starting selection. Returns the count, or
+// -1 when out of memory (both are NULL then).
+static int ordered_windows(int dir, pid_t **pids, uint32_t **wids, int *sel) {
+    win_t *f = wm_focused(); // first: it may track a new window, and nwins sizes the arrays
+    int cap = nwins ? nwins : 1, at = -1;
+    *pids = malloc(sizeof **pids * cap);
+    *wids = malloc(sizeof **wids * cap);
+    int n = *pids && *wids ? switch_order(f, *pids, *wids, &at) : -1;
+    if (n < 0) {
+        free(*pids);
+        free(*wids);
+        *pids = NULL;
+        *wids = NULL;
+        return -1;
+    }
+    *sel = sel_start(at, dir, n);
+    return n;
+}
+
 // Every switchable window, in the menu bar's order (grouped by app), so Tab walks the strip left
 // to right.
 int wm_windows(int dir, sw_entry_t **out, int *sel) {
-    win_t *f = wm_focused(); // first: it may track a new window, and nwins sizes the arrays
-    int cap = nwins ? nwins : 1, at = -1;
-    sw_entry_t *list = malloc(sizeof *list * cap);
-    pid_t *pids = malloc(sizeof *pids * cap);
-    uint32_t *wids = malloc(sizeof *wids * cap);
-    int n = list && pids && wids ? switch_order(f, pids, wids, &at) : -1;
-    if (n < 0) {
-        free(list);
+    pid_t *pids;
+    uint32_t *wids;
+    int n = ordered_windows(dir, &pids, &wids, sel);
+    if (n < 0) return 0;
+    sw_entry_t *list = malloc(sizeof *list * (n ? n : 1));
+    if (!list) {
         free(pids);
         free(wids);
         return 0;
@@ -139,7 +164,6 @@ int wm_windows(int dir, sw_entry_t **out, int *sel) {
     free(pids);
     free(wids);
     label_entries(list, n);
-    *sel = sel_start(at, dir, n);
     *out = list;
     return n;
 }
@@ -148,18 +172,15 @@ int wm_windows(int dir, sw_entry_t **out, int *sel) {
 // *out is malloc'd only when the count is > 0, else NULL; *sel as in wm_windows.
 int wm_window_ids(int dir, uint32_t **out, int *sel) {
     *out = NULL;
-    win_t *f = wm_focused();
-    int cap = nwins ? nwins : 1, at = -1;
-    pid_t *pids = malloc(sizeof *pids * cap);
-    uint32_t *ids = malloc(sizeof *ids * cap);
-    int n = pids && ids ? switch_order(f, pids, ids, &at) : -1;
+    pid_t *pids;
+    uint32_t *ids;
+    int n = ordered_windows(dir, &pids, &ids, sel);
     free(pids);
     if (n <= 0) {
         free(ids);
         *sel = 0;
         return 0;
     }
-    *sel = sel_start(at, dir, n);
     *out = ids;
     return n;
 }
@@ -173,10 +194,11 @@ static int menubar_order(pid_t *pids, uint32_t *wids) {
     uint32_t vwid[JD_MENUBAR_WINS];
     int nv = 0;
     CFArrayRef shown = shown_windows();
+    displays_t ds = read_displays();
     for (int i = 0; i < nwins && nv < JD_MENUBAR_WINS; i++) {
         win_t *w = &wins[i];
         if (!on_desk(w)) continue;
-        if (!shown_grace(is_shown(shown, w->wid), &w->was_listed, now, w->shown_at)) continue;
+        if (!shown_grace(is_shown(shown, &ds, w->wid), &w->was_listed, now, w->shown_at)) continue;
         vpid[nv] = w->pid;
         vwid[nv++] = w->wid;
     }

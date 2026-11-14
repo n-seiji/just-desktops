@@ -157,12 +157,11 @@ static void log_focus(const win_t *w, const char *reason, int to) {
     long long idle;
     log_context(w, app, sizeof app, &here, &idle);
     bool settling = CFAbsoluteTimeGetCurrent() < settle_until;
-    if (to == cur_ws)
-        os_log(ws_log(), "wid=%u app=%{public}s ws=%d reason=%{public}s trigger=%{public}s cur=%d settling=%d stale=%d same_app_here=%d idle_ms=%lld",
-               w->wid, app, w->ws, reason, trigger, cur_ws, settling, w->wid == stale, here, idle);
-    else
-        os_log(ws_log(), "wid=%u app=%{public}s ws=%d reason=%{public}s trigger=%{public}s cur=%d->%d settling=%d stale=%d same_app_here=%d idle_ms=%lld",
-               w->wid, app, w->ws, reason, trigger, cur_ws, to, settling, w->wid == stale, here, idle);
+    char cur[24];
+    if (to == cur_ws) snprintf(cur, sizeof cur, "%d", cur_ws);
+    else snprintf(cur, sizeof cur, "%d->%d", cur_ws, to);
+    os_log(ws_log(), "wid=%u app=%{public}s ws=%d reason=%{public}s trigger=%{public}s cur=%{public}s settling=%d stale=%d same_app_here=%d idle_ms=%lld",
+           w->wid, app, w->ws, reason, trigger, cur, settling, w->wid == stale, here, idle);
 }
 
 void wm_set_trigger(const char *what) { trigger = what; }
