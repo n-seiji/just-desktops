@@ -131,12 +131,14 @@ mise でアップグレードすると、バイナリのパスが変わります
 | 項目 | 値 | 既定値 | 動作 |
 |---|---|---|---|
 | `border` | `on`、`off` | `on` | フォーカス中のウィンドウを囲む枠。`off` なら枠のウィンドウを作らない |
-| `switcher` | `list`、`square`、`off` | `list` | Tab スイッチャーの表示。`on` と未知の値は `list` になる |
+| `switcher` | `list`、`square`、`off` | `list` | Tab スイッチャーの表示。`on` は `list` と同じ |
 | `menubar` | `on`（または `strip`）、`icon`、`off` | `off`（アプリ版は `on`） | メニューバーの項目。ウィンドウごとのアイコンか、小さなアプリアイコンだけか。アプリ版は常に項目を出すので、`off` は `icon` と同じ |
 | `keys` | 数字か英字を 10 個まで | `1 2 3 q w e` | n 番目のキーがデスクトップ n |
 | `modifier` | `opt`、`cmd`、`ctrl` | `opt` | すべてのホットキーの基本の修飾キー。[modifier](docs/workspaces.md#modifier) を参照 |
 | `no_preview` | bundle id | — | square スイッチャーで画面を撮らないアプリ。複数行書ける |
 | `<bundle id>` | `<n>`、`none` | — | アプリをデスクトップ n に固定する。`none` はすべてのデスクトップに属させ、デスクトップを切り替えるとアプリを隠す |
+
+1 行に 1 つ、`key = value` の形で書きます。`#` から行末まではコメントです（行の途中でも）。値は大文字小文字を区別しません。解釈できない値、項目、行は、警告を stderr に出して無視します（LaunchAgent なら `~/Library/Logs/just-desktops.log`。アプリ版にはログファイルがないので、アプリを終了してからターミナルで `just-desktops.app/Contents/MacOS/just-desktops` を実行すると見られます）。設定は前の行の値か既定値のままです。同じ項目は最後の行が有効です。
 
 ```
 switcher = square
@@ -154,7 +156,7 @@ com.apple.Safari = 1
 ## 設計
 
 - **プロセスは 1 つ。** デスクトップ、スイッチャー、枠を、1 つの常駐プロセスで動かします。
-- **ほぼ C。** Objective-C は `src/apps.m`（アプリの起動、終了、アクティブ化のイベント）と `src/menubar*.m`（メニューバーの項目とパネルとメニュー。`menubar` が `off` でないときだけ作る）です。`src/app.m` は、アプリ版の初回パネル、ログイン項目、設定の補助です。
+- **ほぼ C。** Objective-C は `src/main.m`（起動処理、ロック、シグナル）、`src/apps.m`（アプリの起動、終了、アクティブ化のイベント）、`src/thumb.m`（square スイッチャー用の ScreenCaptureKit によるスクリーンショット）と `src/menubar*.m`（メニューバーの項目とパネルとメニュー。`menubar` が `off` でないときだけ作る）です。`src/app.m` は、アプリ版の初回パネル、ログイン項目、設定の補助です。
 - **枠は SkyLight で描きます。** JankyBorders と同じやり方で、NSWindow は作りません。
 - **ホットキーは CGEventTap** で、メインのランループで受けます。スレッドは増やしません。
 

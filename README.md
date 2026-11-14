@@ -131,12 +131,14 @@ File: `~/.config/just-desktops/config`. See [config.example](config.example).
 | Option | Values | Default | What it does |
 |---|---|---|---|
 | `border` | `on`, `off` | `on` | Ring around the focused window. `off` creates no border window |
-| `switcher` | `list`, `square`, `off` | `list` | Tab switcher style. `on` means `list`, unknown values too |
+| `switcher` | `list`, `square`, `off` | `list` | Tab switcher style. `on` means `list` |
 | `menubar` | `on` (or `strip`), `icon`, `off` | `off` (app: `on`) | Menu bar item: one glyph per window, or only a small app icon. The app always has an item, so `off` means `icon` there |
 | `keys` | up to 10 digits or letters | `1 2 3 q w e` | The n-th key is Desktop n |
 | `modifier` | `opt`, `cmd`, `ctrl` | `opt` | Base modifier of every hotkey. See [modifier](docs/workspaces.md#modifier) |
 | `no_preview` | bundle ids | — | Apps the square switcher never screenshots. Repeatable |
 | `<bundle id>` | `<n>`, `none` | — | Pin an app to Desktop n. `none` puts the app on every desktop and hides it when you switch desktops |
+
+One `key = value` per line. `#` starts a comment, anywhere on a line. Values are case-insensitive. A value, setting or line that is not understood is ignored with a warning on stderr (`~/Library/Logs/just-desktops.log` for the LaunchAgent; the app has no log file: quit it and run `just-desktops.app/Contents/MacOS/just-desktops` from a terminal to see it), and settings keep their earlier or default value. The last line wins.
 
 ```
 switcher = square
@@ -154,7 +156,7 @@ com.apple.Safari = 1
 ## Design
 
 - **One process.** Workspaces, the switcher and the border live in one daemon.
-- **Mostly C.** The Objective-C is `src/apps.m` (app launch, quit and activation events) and `src/menubar*.m` (the status item and its panel and menu, created only when `menubar` is not `off`; `src/app.m` is the app's first-run panel, login item and config helpers).
+- **Mostly C.** The Objective-C is `src/main.m` (start-up, the lock file, signals), `src/apps.m` (app launch, quit and activation events), `src/thumb.m` (ScreenCaptureKit screenshots for the square switcher) and `src/menubar*.m` (the status item and its panel and menu, created only when `menubar` is not `off`; `src/app.m` is the app's first-run panel, login item and config helpers).
 - **Border through SkyLight**, like JankyBorders, so no NSWindow is created.
 - **Hotkeys through a CGEventTap** on the main run loop. No extra threads.
 

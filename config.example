@@ -1,4 +1,6 @@
 # ~/.config/just-desktops/config
+# One `key = value` per line. # starts a comment, anywhere on a line. Values are case-insensitive. The last line for a key wins.
+# An unknown value, setting or line is ignored with a warning on stderr (the log file for the LaunchAgent); the setting keeps its earlier or default value.
 
 # Base modifier of every hotkey (written ⌥ in this file): opt (default) | cmd | ctrl. option, alt, command and control also work.
 # Command and Control take over cmd-Tab / cmd-digit and ctrl-Tab / ctrl-digit system wide while just-desktops runs.
@@ -7,7 +9,7 @@ modifier = opt
 # Draw the border around the focused window (on|off)
 border = on
 
-# ⌥Tab window switcher: list | square | off (on = list). off draws no panel: each Tab focuses the next window at once.
+# ⌥Tab window switcher: list | square | off (on means list). off draws no panel: each Tab focuses the next window at once.
 # square shows a screenshot of each window and asks for Screen Recording permission at launch; until it is
 # granted it shows the app icon. The panel appears after ⌥ has been held about 150ms; a quick tap never draws it. After a rebuild macOS asks again (the grant follows the binary's code hash).
 switcher = list
@@ -25,7 +27,7 @@ menubar = off
 # The n-th key is Desktop n. Digits and letters, at most 10. Default: 1 2 3 q w e
 keys = 1 2 3 q w e
 
-# Pin apps to a desktop: <bundle id> = <desktop number>
+# Pin apps to a desktop: <bundle id> = <desktop number, 1-10>
 # A pin places a window on that desktop when it first appears (an existing window at launch, or one opened in the background); that does not switch to it.
 # A window that is focused when it appears, or focused later, switches to its desktop: opening a link in a pinned Safari takes you to its pin.
 # Find a bundle id with: osascript -e 'id of app "Safari"'
