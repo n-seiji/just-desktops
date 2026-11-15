@@ -1,5 +1,5 @@
 #pragma once
-// Desktops emulated by parking the windows of inactive desktops at the bottom-right corner.
+// Desktops emulated by parking the windows of inactive desktops at the bottom-right corner of the display furthest right.
 #include "common.h"
 
 void wm_init(void);
@@ -11,6 +11,7 @@ void wm_set_trigger(const char *what); // what led to the next wm_on_focus, a li
 void wm_settle(void); // macOS is about to move focus on its own: parked windows it focuses for a while are not followed
 void wm_settle_pid(pid_t pid); // pid quit: if it had a window here, the focus macOS moves next is not followed
 void wm_switch(int ws);
+void wm_displays_changed(void); // displays were added, removed or moved: parked windows go to the new corner
 void wm_dismiss_every(void); // the frontmost `none` app is hidden alone and focus returns to the current desktop
 void wm_move_focused(int ws);
 int wm_current(void);

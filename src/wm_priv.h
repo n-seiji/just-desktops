@@ -41,6 +41,9 @@ void wm_hide(win_t *w);
 void wm_log_ws(const win_t *w, int old, const char *reason); // os_log a desktop change (old -1: first tracked)
 void wm_log_recover(const win_t *w); // os_log a window found parked by a previous run
 
+// wm_list.c: the display windows are parked at the corner of (see shown_park_display); the main display if none is listed
+CGRect wm_park_display(void);
+
 // wm_list.c: window lists and the menu bar
 void wm_refresh_menubar(win_t *f);
 void wm_mark_fresh(uint32_t wid, double now); // the menu bar prefers wid to macOS's lagging focus for a moment

@@ -24,6 +24,18 @@ uint32_t shown_front(double now, double fresh_until, uint32_t fresh_wid, uint32_
     return now < fresh_until && fresh_wid ? fresh_wid : focused_wid;
 }
 
+CGRect shown_park_display(const CGRect *displays, uint32_t n) {
+    if (n == 0) return CGRectZero;
+    CGRect best = displays[0];
+    for (uint32_t k = 1; k < n; k++) {
+        CGRect d = displays[k];
+        if (CGRectGetMaxX(d) > CGRectGetMaxX(best) ||
+            (CGRectGetMaxX(d) == CGRectGetMaxX(best) && CGRectGetMaxY(d) > CGRectGetMaxY(best)))
+            best = d;
+    }
+    return best;
+}
+
 CGPoint shown_park_point(CGRect display) {
     return CGPointMake(CGRectGetMaxX(display) - 1, CGRectGetMaxY(display) - 1);
 }
@@ -37,8 +49,8 @@ CGPoint shown_safe_point(CGRect display) {
     return CGPointMake(display.origin.x + 40, display.origin.y + 60);
 }
 
-CGPoint shown_return_point(CGPoint read, CGRect display, bool has_saved, CGPoint saved, double since_shown) {
-    if (shown_is_parked(read, display)) return has_saved ? saved : shown_safe_point(display);
+CGPoint shown_return_point(CGPoint read, CGRect park, CGRect main_display, bool has_saved, CGPoint saved, double since_shown) {
+    if (shown_is_parked(read, park)) return has_saved ? saved : shown_safe_point(main_display);
     if (has_saved && since_shown >= 0 && since_shown <= FRESH_S) return saved;
     return read;
 }

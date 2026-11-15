@@ -181,7 +181,7 @@ Needs the Xcode Command Line Tools and [mise](https://mise.jdx.dev). Use `mise r
 
 ## Limitations
 
-- Windows are parked on the main display only. Multiple displays are not supported yet.
+- Windows are parked at the bottom-right corner of the display furthest to the right (the lowest of those), which no other display touches. Desktops are shared by all displays: there is one set of desktops, not one per display. Parked windows move to that display, so with "Displays have separate Spaces" on they join its Space. Multiple displays are lightly tested.
 - SkyLight is a private Apple API, so a macOS update can break the border.
 - After a crash, parked windows stay in the bottom-right corner until the next launch moves them back.
 - Only the desktop keys and the base modifier are configurable.

@@ -15,7 +15,7 @@
 #include <stdlib.h>
 
 // Parking, switching and focus. A window of an inactive desktop sits at the bottom-right corner of
-// the main display; a desktop switch parks one set and unparks another, and a parked window that
+// the display furthest right (see shown_park_display); a desktop switch parks one set and unparks another, and a parked window that
 // gets focused (Raycast, Cmd-Tab, Dock) switches to its desktop instead of coming here, after a short
 // check that the user did not just minimize, close or quit their window here. In the quiet period after a
 // switch that focus is macOS's doing and is ignored, unless a click, Return / Enter or a shortcut came
@@ -54,7 +54,7 @@ void wm_settle_pid(pid_t pid) {
 // ---- hide / show / focus ----
 
 static CGPoint hide_point(void) {
-    return shown_park_point(CGDisplayBounds(CGMainDisplayID()));
+    return shown_park_point(wm_park_display());
 }
 
 // Some apps animate a move while AXEnhancedUserInterface is on (Chrome, once an assistive app such
@@ -75,8 +75,8 @@ void wm_hide(win_t *w) {
     if (w->hidden) return;
     CGPoint p;
     if (!ax_value(w->el, kAXPositionAttribute, kAXValueTypeCGPoint, &p)) return;
-    CGRect b = CGDisplayBounds(CGMainDisplayID());
-    w->saved = shown_return_point(p, b, w->has_saved, w->saved, CFAbsoluteTimeGetCurrent() - w->shown_at);
+    CGRect b = wm_park_display();
+    w->saved = shown_return_point(p, b, CGDisplayBounds(CGMainDisplayID()), w->has_saved, w->saved, CFAbsoluteTimeGetCurrent() - w->shown_at);
     w->has_saved = true;
     if (!shown_is_parked(p, b)) move(w, hide_point());
     w->hidden = true;
@@ -188,7 +188,11 @@ static void log_reshow(const win_t *w, CGPoint want, CGPoint got) {
     app_name(w->pid, app, sizeof app);
     // parked=1: still in the corner, so the first move had not been applied; 0: it was put somewhere else.
     os_log(ws_log(), "wid=%u app=%{public}s reason=reshow want=%d,%d found=%d,%d parked=%d", w->wid, app,
-           (int)want.x, (int)want.y, (int)got.x, (int)got.y, shown_is_parked(got, CGDisplayBounds(CGMainDisplayID())));
+           (int)want.x, (int)want.y, (int)got.x, (int)got.y, shown_is_parked(got, wm_park_display()));
+}
+
+static void log_repark(int n) {
+    os_log(ws_log(), "reason=repark n=%d", n);
 }
 
 void wm_set_trigger(const char *what) { trigger = what; }
@@ -453,6 +457,30 @@ void wm_switch(int ws) {
     win_t *t = focus_in_current();
     hide_every();
     finish_change(t);
+}
+
+// The displays changed, so the park corner may have moved: parked windows go to the new one. Their
+// places to return to are kept.
+// It also runs when nothing moved (a wake, another display's resolution), so a window still in the corner is
+// left alone, and an app that timed out is not asked again: each call can block for a second.
+void wm_displays_changed(void) {
+    if (shutting_down) return;
+    CGRect d = wm_park_display();
+    int n = 0;
+    bool *hung = calloc(nwins + 1, 1);
+    for (int i = 0; i < nwins; i++) {
+        win_t *w = &wins[i];
+        CGPoint p;
+        if (!w->hidden || (hung && hung[i])) continue;
+        if (ax_value(w->el, kAXPositionAttribute, kAXValueTypeCGPoint, &p) && shown_is_parked(p, d)) continue;
+        AXError err = move(w, shown_park_point(d));
+        if (err == kAXErrorSuccess) n++;
+        if (err == kAXErrorCannotComplete && hung)
+            for (int j = i + 1; j < nwins; j++)
+                if (wins[j].pid == w->pid) hung[j] = true;
+    }
+    free(hung);
+    if (n) log_repark(n);
 }
 
 void wm_dismiss_every(void) {

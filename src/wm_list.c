@@ -63,6 +63,17 @@ static displays_t read_displays(void) {
     return d;
 }
 
+// The online displays, not the active ones: a display that is asleep is still where it was, and a window
+// parked at a corner it touches would be in view when it wakes.
+CGRect wm_park_display(void) {
+    CGDirectDisplayID ds[8];
+    CGRect r[8];
+    uint32_t n = 0;
+    CGGetOnlineDisplayList(8, ds, &n);
+    for (uint32_t k = 0; k < n; k++) r[k] = CGDisplayBounds(ds[k]);
+    return n ? shown_park_display(r, n) : CGDisplayBounds(CGMainDisplayID());
+}
+
 // Whether wid is really shown: in that list, not transparent, and with a visible part on a display (so not
 // a hidden app's window, one on another Space, alpha 0 or off screen). True when the list is unavailable.
 static bool is_shown(CFArrayRef shown, const displays_t *ds, uint32_t wid) {

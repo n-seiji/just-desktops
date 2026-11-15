@@ -80,6 +80,22 @@ static void save_membership(void) {
     free(text);
 }
 
+// A display change reports once per display, after a begin-configuration call. The park corner moves with
+// it, so once things have been quiet for a second the parked windows go to the new one. Everything runs on
+// the main queue: the daemon is single-threaded.
+static void displays_reconfigured(CGDirectDisplayID display, CGDisplayChangeSummaryFlags flags, void *info) {
+    (void)display;
+    (void)info;
+    if (flags & kCGDisplayBeginConfigurationFlag) return;
+    dispatch_async(dispatch_get_main_queue(), ^{
+        static unsigned gen;
+        unsigned mine = ++gen;
+        dispatch_after(dispatch_time(DISPATCH_TIME_NOW, NSEC_PER_SEC), dispatch_get_main_queue(), ^{
+            if (mine == gen) wm_displays_changed();
+        });
+    });
+}
+
 // Every way out goes through here, and only the first caller does the work: the state is saved (needs no
 // Accessibility, so it comes first), then the windows come back. There is no atexit handler: a second
 // instance that exits on the lock must not run this and overwrite the file with an empty one.
@@ -192,6 +208,7 @@ int main(int argc, char **argv) {
         wm_init();
         load_membership();
         managing = true;
+        CGDisplayRegisterReconfigurationCallback(displays_reconfigured, NULL);
         [NSNotificationCenter.defaultCenter addObserverForName:NSApplicationWillTerminateNotification object:nil queue:nil
                                                     usingBlock:^(NSNotification *n) { (void)n; leave(); }];
         apps_init();

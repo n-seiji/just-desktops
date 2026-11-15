@@ -1,12 +1,12 @@
 # Workspaces
 
-just-desktops keeps its own desktops. Windows of inactive desktops are parked in a corner of the main display, so macOS Spaces and SIP are never touched. This page covers history, pins, apps on every desktop, calling a window from another desktop, the border and the modifier.
+just-desktops keeps its own desktops. Windows of inactive desktops are parked in the bottom-right corner of the display furthest to the right, so no macOS Space is created or switched and SIP stays on. This page covers history, pins, apps on every desktop, calling a window from another desktop, the border and the modifier.
 
 ## Desktops and keys
 
 - The desktop keys are set with `keys` in the config: digits and letters, at most 10. The n-th key is Desktop n. Other keys pass through untouched.
 - On exit, every parked window is moved back, and each window's desktop is saved for the next start: windows return to their desktops after a restart, or a quit followed by a launch within a minute. After a crash, parked windows stay in the bottom-right corner until the next launch, and they come back on the current desktop.
-- Windows are parked on the main display only.
+- Windows are parked at the bottom-right corner of the display furthest to the right (the lowest of those), which no other display touches. Desktops are shared by all displays: there is one set of desktops, not one per display. Parked windows move to that display, so with "Displays have separate Spaces" on they join its Space. Multiple displays are lightly tested.
 
 ## History
 
