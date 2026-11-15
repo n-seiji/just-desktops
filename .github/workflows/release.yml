@@ -57,7 +57,7 @@ jobs:
   build:
     needs: check
     if: needs.check.outputs.release == 'true'
-    runs-on: macos-14
+    runs-on: macos-15
     # Holds the signing and notarization secrets; only main can deploy to it (scripts/setup-release-env.sh).
     environment: signing
     permissions:

@@ -1,12 +1,12 @@
 # Workspaces
 
-just-desktops keeps its own desktops. Windows of inactive desktops are parked in a corner of the main display, so macOS Spaces and SIP are never touched. This page covers history, pins, apps on every desktop, calling a window from another desktop, the border and the modifier.
+just-desktops keeps its own desktops. Windows of inactive desktops are parked in the bottom-right corner of the display furthest to the right, so no macOS Space is created or switched and SIP stays on. This page covers history, pins, apps on every desktop, calling a window from another desktop, the border and the modifier.
 
 ## Desktops and keys
 
 - The desktop keys are set with `keys` in the config: digits and letters, at most 10. The n-th key is Desktop n. Other keys pass through untouched.
 - On exit, every parked window is moved back, and each window's desktop is saved for the next start: windows return to their desktops after a restart, or a quit followed by a launch within a minute. After a crash, parked windows stay in the bottom-right corner until the next launch, and they come back on the current desktop.
-- Windows are parked on the main display only.
+- Windows are parked at the bottom-right corner of the display furthest to the right (the lowest of those), which no other display touches. Desktops are shared by all displays: there is one set of desktops, not one per display. Parked windows move to that display, so with "Displays have separate Spaces" on they join its Space. Multiple displays are lightly tested.
 
 ## History
 
@@ -42,6 +42,7 @@ com.googlecode.iterm2 = 2
 - A window of a pinned app is placed on its desktop when it first appears, and it is not switched to. This covers windows that exist when just-desktops starts and windows opened later.
 - A window that is focused when it appears, or that you focus later, switches to its desktop. Focusing a pinned app from another desktop takes you to its pin.
 - The pin is applied once, when the window first appears.
+- The last line for an app wins. A `#` starts a comment anywhere on a line, so `com.apple.Safari = 1 # browser` works. A value that is not `none` or a number from 1 to 10 is ignored with a warning on stderr; a misspelt setting name is read as a bundle id, so it warns the same way unless its value happens to be a number or `none`. The settings menu of the app rewrites a whole line, so a comment after `border`, `switcher` or `menubar` is dropped when you change that setting there.
 - A pin to a desktop number higher than the number of `keys` is ignored.
 
 ## Apps on every desktop
@@ -76,7 +77,7 @@ The border is a thin ring floating 3pt off the focused window, brighter along th
 
 ## Modifier
 
-`⌥` in these docs is the base modifier. Option is the default. Set `modifier = cmd` or `modifier = ctrl` for Command or Control. `option`, `alt`, `command` and `control` are accepted too, in any case. An unknown value gives Option.
+`⌥` in these docs is the base modifier. Option is the default. Set `modifier = cmd` or `modifier = ctrl` for Command or Control. `option`, `alt`, `command` and `control` are accepted too, in any case. An unknown value is ignored with a warning on stderr, and the setting stays at its default (Option) or an earlier valid line.
 
 Every hotkey follows it: the desktop keys, moving a window, `⌥[` and `⌥]`, the switcher, releasing it to commit, Esc and the desktop keys while the panel is open. The Shift variants stay.
 

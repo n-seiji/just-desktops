@@ -20,7 +20,7 @@ The Tab switcher moves between the windows of the current desktop. It has three 
 | `square` | A wide glass panel (640x420pt) in the middle of the screen. It shows one window large (its screenshot, or the app icon until there is one), a `k / n` counter and a row of dots. No window name is shown. `⌥Tab` slides the next window in from the right, `⌥⇧Tab` from the left. A tall or narrow window is fitted to the picture box and centred, not stretched. |
 | `off` | No panel. See below. |
 
-`switcher = on` means `list`. Any other unknown value gives `list` too, including `peek`, which no longer exists.
+`switcher = on` means `list`. An unknown value, including `peek`, which no longer exists, is ignored with a warning on stderr, and the default (`list`) or an earlier valid line stays.
 
 In `list`, a row shows the app name when the app has one window. With several windows, rows show the window titles ("App 2" when a title is empty or repeated).
 

@@ -14,7 +14,7 @@
 
 // The apps and windows the manager knows, kept in step with Accessibility notifications. Workspaces
 // are emulated like AeroSpace does: windows of inactive workspaces are parked at the bottom-right
-// corner of the main display, so macOS Spaces / SIP are never touched (see wm_focus.c).
+// corner of the display furthest right, so macOS Spaces / SIP are never touched (see wm_focus.c).
 
 win_t *wins;
 int nwins;
@@ -128,15 +128,19 @@ static win_t *track(app_t *a, AXUIElementRef el) {
 
     // A window left in the corner by a previous crash: bring it back.
     CGPoint p;
-    CGRect b = CGDisplayBounds(CGMainDisplayID());
-    if (ax_value(el, kAXPositionAttribute, kAXValueTypeCGPoint, &p) && shown_is_parked(p, b)) {
-        CGPoint safe = CGPointMake(b.origin.x + 40, b.origin.y + 60);
+    CGRect m = CGDisplayBounds(CGMainDisplayID());
+    // The main display's corner too: where a run before a display was plugged in, or an older version, parked.
+    CGRect park = wm_park_display();
+    if (ax_value(el, kAXPositionAttribute, kAXValueTypeCGPoint, &p) && (shown_is_parked(p, park) || shown_is_parked(p, m))) {
+        CGPoint safe = shown_safe_point(m);
         // Only a window shown here is moved out. One of another desktop stays in the corner, parked, and
         // returns to the safe point when its desktop is shown.
         if (wm_here(w)) {
             ax_set_position(el, safe);
         } else {
+            if (!shown_is_parked(p, park)) ax_set_position(el, shown_park_point(park));
             w->saved = safe;
+            w->has_saved = true;
             w->hidden = true;
         }
         wm_log_recover(w);

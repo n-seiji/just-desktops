@@ -8,8 +8,10 @@ typedef struct {
     uint32_t wid;
     int ws;
     CGPoint saved;
+    bool has_saved; // saved holds a place to return to
     bool hidden;
     double shown_at; // when show last unparked it
+    double parked_at; // when wm_hide last moved it to the corner
     bool was_listed; // WindowServer listed it the last time we looked
     bool minimized;  // kept from the (de)miniaturize notifications: asking a hung app costs a timeout per window
 } win_t;
@@ -39,6 +41,14 @@ win_t *wm_focused(void); // the window macOS reports as focused, tracked now if 
 void wm_hide(win_t *w);
 void wm_log_ws(const win_t *w, int old, const char *reason); // os_log a desktop change (old -1: first tracked)
 void wm_log_recover(const win_t *w); // os_log a window found parked by a previous run
+
+// wm_list.c: the display windows are parked at the corner of (see shown_park_display); the main display if none is listed
+CGRect wm_park_display(void);
+
+// Whether WindowServer has every window moved at or after `since` where it was sent: the unparked ones out
+// of the corner, the parked ones in it. Accessibility reports a move as done at once; the window itself
+// follows some tens of ms later. True when WindowServer cannot be asked.
+bool wm_in_place(double since);
 
 // wm_list.c: window lists and the menu bar
 void wm_refresh_menubar(win_t *f);

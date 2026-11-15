@@ -124,11 +124,11 @@ static Class login_class(void) {
 
 static SMAppService *login_service(void) { return [login_class() mainAppService]; }
 
-int app_login_state(void) {
+login_state_t app_login_state(void) {
     switch (login_service().status) {
-    case SMAppServiceStatusEnabled: return 1;
-    case SMAppServiceStatusRequiresApproval: return 2;
-    default: return 0;
+    case SMAppServiceStatusEnabled: return LOGIN_ON;
+    case SMAppServiceStatusRequiresApproval: return LOGIN_NEEDS_APPROVAL;
+    default: return LOGIN_OFF;
     }
 }
 

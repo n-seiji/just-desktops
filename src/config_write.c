@@ -10,7 +10,8 @@
 // Every setting commented out at its default, so a freshly created file changes nothing.
 static const char sample[] =
     "# just-desktops config. Remove the leading # of a line to set it; restart to apply.\n"
-    "# The menu bar item rewrites only the line it changes.\n"
+    "# The menu bar item rewrites only the line it changes. # starts a comment anywhere on a line; values are\n"
+    "# case-insensitive; an unknown value or setting is ignored with a warning on stderr; the last line wins.\n"
     "\n"
     "# Base modifier of every hotkey: opt | cmd | ctrl\n"
     "# modifier = opt\n"

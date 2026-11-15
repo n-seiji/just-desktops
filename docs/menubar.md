@@ -8,7 +8,7 @@ An optional menu bar item shows one glyph per window on this desktop, and the cu
 | `icon` | Only a small template app icon (an outlined rounded square with a filled one inside) |
 | `off` | None. Command line only |
 
-The command line default is `off`. The app always has an item: its default is `on`, and `off` behaves like `icon`.
+Values are case-insensitive; any other value is ignored with a warning on stderr, and the setting keeps its earlier or default value. The command line default is `off`. The app always has an item: its default is `on`, and `off` behaves like `icon`.
 
 ![The menu bar item](images/menubar.png)
 

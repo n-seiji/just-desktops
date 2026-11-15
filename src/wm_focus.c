@@ -9,13 +9,15 @@
 #include "hotkey.h"
 #include "menubar.h"
 #include "shown.h"
+#include "skylight.h"
 #include <dispatch/dispatch.h>
 #include <os/log.h>
 #include <stdio.h>
 #include <stdlib.h>
 
 // Parking, switching and focus. A window of an inactive desktop sits at the bottom-right corner of
-// the main display; a desktop switch parks one set and unparks another, and a parked window that
+// the display furthest right (see shown_park_display); a desktop switch parks one set and unparks another with
+// the screen held still until the new ones are in place (see release_when_in_place), and a parked window that
 // gets focused (Raycast, Cmd-Tab, Dock) switches to its desktop instead of coming here, after a short
 // check that the user did not just minimize, close or quit their window here. In the quiet period after a
 // switch that focus is macOS's doing and is ignored, unless a click, Return / Enter or a shortcut came
@@ -53,10 +55,6 @@ void wm_settle_pid(pid_t pid) {
 
 // ---- hide / show / focus ----
 
-static CGPoint hide_point(void) {
-    return shown_park_point(CGDisplayBounds(CGMainDisplayID()));
-}
-
 // Some apps animate a move while AXEnhancedUserInterface is on (Chrome, once an assistive app such
 // as a password manager turns it on), so a parked window would slide into the corner on screen.
 // While quitting the toggle is skipped: it is three more calls to an app that may be hung, and a timed-out
@@ -70,18 +68,39 @@ static AXError move(win_t *w, CGPoint p) {
     return err;
 }
 
+// A window already in the corner is not moved again, and never becomes its own place to return to.
 void wm_hide(win_t *w) {
     if (w->hidden) return;
     CGPoint p;
     if (!ax_value(w->el, kAXPositionAttribute, kAXValueTypeCGPoint, &p)) return;
-    w->saved = p;
-    move(w, hide_point());
+    CGRect b = wm_park_display();
+    w->saved = shown_return_point(p, b, CGDisplayBounds(CGMainDisplayID()), w->has_saved, w->saved, CFAbsoluteTimeGetCurrent() - w->shown_at);
+    w->has_saved = true;
+    if (!shown_is_parked(p, b)) {
+        if (move(w, shown_park_point(b)) == kAXErrorSuccess) w->parked_at = CFAbsoluteTimeGetCurrent();
+    }
     w->hidden = true;
 }
 
+static void log_reshow(const win_t *w, CGPoint want, CGPoint got);
+
+// macOS and apps adjust a position they are asked for (the park point ends up 41pt higher, or more), and may not
+// have applied it yet: read it back once and ask again if it is elsewhere. Not while quitting, with its
+// short budget.
+static void recheck_position(win_t *w) {
+    CGPoint got;
+    if (shutting_down || !ax_value(w->el, kAXPositionAttribute, kAXValueTypeCGPoint, &got)) return;
+    if (!shown_missed(w->saved, got)) return;
+    log_reshow(w, w->saved, got);
+    move(w, w->saved);
+}
+
+// A window whose move failed counts as shown all the same: a busy app may still apply it late, and it must
+// then be parked again. One that stayed in the corner keeps its place the next time it is parked (wm_hide).
 static AXError show(win_t *w) {
     if (!w->hidden) return kAXErrorSuccess;
     AXError err = move(w, w->saved);
+    if (err == kAXErrorSuccess) recheck_position(w);
     w->hidden = false;
     w->shown_at = CFAbsoluteTimeGetCurrent();
     return err;
@@ -157,12 +176,23 @@ static void log_focus(const win_t *w, const char *reason, int to) {
     long long idle;
     log_context(w, app, sizeof app, &here, &idle);
     bool settling = CFAbsoluteTimeGetCurrent() < settle_until;
-    if (to == cur_ws)
-        os_log(ws_log(), "wid=%u app=%{public}s ws=%d reason=%{public}s trigger=%{public}s cur=%d settling=%d stale=%d same_app_here=%d idle_ms=%lld",
-               w->wid, app, w->ws, reason, trigger, cur_ws, settling, w->wid == stale, here, idle);
-    else
-        os_log(ws_log(), "wid=%u app=%{public}s ws=%d reason=%{public}s trigger=%{public}s cur=%d->%d settling=%d stale=%d same_app_here=%d idle_ms=%lld",
-               w->wid, app, w->ws, reason, trigger, cur_ws, to, settling, w->wid == stale, here, idle);
+    char cur[24];
+    if (to == cur_ws) snprintf(cur, sizeof cur, "%d", cur_ws);
+    else snprintf(cur, sizeof cur, "%d->%d", cur_ws, to);
+    os_log(ws_log(), "wid=%u app=%{public}s ws=%d reason=%{public}s trigger=%{public}s cur=%{public}s settling=%d stale=%d same_app_here=%d idle_ms=%lld",
+           w->wid, app, w->ws, reason, trigger, cur, settling, w->wid == stale, here, idle);
+}
+
+static void log_reshow(const win_t *w, CGPoint want, CGPoint got) {
+    char app[128];
+    app_name(w->pid, app, sizeof app);
+    // parked=1: still in the corner, so the first move had not been applied; 0: it was put somewhere else.
+    os_log(ws_log(), "wid=%u app=%{public}s reason=reshow want=%d,%d found=%d,%d parked=%d", w->wid, app,
+           (int)want.x, (int)want.y, (int)got.x, (int)got.y, shown_is_parked(got, wm_park_display()));
+}
+
+static void log_repark(int n) {
+    os_log(ws_log(), "reason=repark n=%d", n);
 }
 
 void wm_set_trigger(const char *what) { trigger = what; }
@@ -410,6 +440,39 @@ static void finish_change(const win_t *t) {
     refresh_menubar_later();
 }
 
+// Windows change place one app at a time: each move is a round trip to its app, and WindowServer shows it
+// some tens of ms after Accessibility says it is done, so a switch showed windows leaving and popping in one
+// by one. The screen is held still across the switch instead and let go when WindowServer has every moved
+// window where it was sent, or HOLD_MAX_S after the moves were asked for (counted in polls, so a clock step
+// cannot stretch it). Switches in quick succession share one hold. A hung app must not freeze every screen
+// while its call times out: past HOLD_BUSY_S the moves go on in view. WindowServer itself lets go after about
+// a second.
+#define HOLD_POLL_S 0.008
+#define HOLD_MAX_S 0.3
+#define HOLD_BUSY_S 0.6
+static unsigned hold_gen;
+static bool holding;
+static double held_since;
+static int hold_polls; // polls left before the hold is given up
+
+static void release_screen(void) {
+    if (!holding) return;
+    holding = false;
+    SLSReenableUpdate(SLSMainConnectionID());
+}
+
+static void release_if_busy(void) {
+    if (holding && CFAbsoluteTimeGetCurrent() - held_since > HOLD_BUSY_S) release_screen();
+}
+
+static void release_when_in_place(unsigned gen) {
+    run_after(HOLD_POLL_S, ^{
+        if (gen != hold_gen) return;
+        if (wm_in_place(held_since) || --hold_polls <= 0) release_screen();
+        else release_when_in_place(gen);
+    });
+}
+
 void wm_switch(int ws) {
     if (ws < 1 || ws > config_workspaces() || ws == cur_ws) return;
     follow_gen++;
@@ -419,14 +482,52 @@ void wm_switch(int ws) {
     int old = cur_ws;
     cur_ws = ws;
     stale = f && f->ws == old ? f->wid : 0;
+    unsigned gen = ++hold_gen;
+    bool began = !holding && SLSDisableUpdate(SLSMainConnectionID()) == kCGErrorSuccess;
+    if (began) {
+        holding = true;
+        held_since = CFAbsoluteTimeGetCurrent();
+    }
     for (int i = 0; i < nwins; i++)
-        if (wins[i].ws == ws) show(&wins[i]);
+        if (wins[i].ws == ws) {
+            release_if_busy();
+            show(&wins[i]);
+        }
     for (int i = 0; i < nwins; i++)
-        if (wins[i].ws == old) wm_hide(&wins[i]);
+        if (wins[i].ws == old) {
+            release_if_busy();
+            wm_hide(&wins[i]);
+        }
 
     win_t *t = focus_in_current();
     hide_every();
     finish_change(t);
+    if (began) hold_polls = (int)(HOLD_MAX_S / HOLD_POLL_S);
+    if (holding) release_when_in_place(gen);
+}
+
+// The displays changed, so the park corner may have moved: parked windows go to the new one. Their
+// places to return to are kept.
+// It also runs when nothing moved (a wake, another display's resolution), so a window still in the corner is
+// left alone, and an app that timed out is not asked again: each call can block for a second.
+void wm_displays_changed(void) {
+    if (shutting_down) return;
+    CGRect d = wm_park_display();
+    int n = 0;
+    bool *hung = calloc(nwins + 1, 1);
+    for (int i = 0; i < nwins; i++) {
+        win_t *w = &wins[i];
+        CGPoint p;
+        if (!w->hidden || (hung && hung[i])) continue;
+        if (ax_value(w->el, kAXPositionAttribute, kAXValueTypeCGPoint, &p) && shown_is_parked(p, d)) continue;
+        AXError err = move(w, shown_park_point(d));
+        if (err == kAXErrorSuccess) n++;
+        if (err == kAXErrorCannotComplete && hung)
+            for (int j = i + 1; j < nwins; j++)
+                if (wins[j].pid == w->pid) hung[j] = true;
+    }
+    free(hung);
+    if (n) log_repark(n);
 }
 
 void wm_dismiss_every(void) {
@@ -521,6 +622,8 @@ void wm_history(int dir) {
 
 void wm_restore_all(void) {
     shutting_down = true;
+    hold_gen++;
+    release_screen();
     double end = CFAbsoluteTimeGetCurrent() + RESTORE_S;
     bool *hung = calloc(nwins + 1, 1); // per window: its app already timed out, so the rest of its windows are left
     for (int i = 0; i < nwins; i++) {
