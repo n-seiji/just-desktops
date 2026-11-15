@@ -70,18 +70,37 @@ static AXError move(win_t *w, CGPoint p) {
     return err;
 }
 
+// A window already in the corner is not moved again, and never becomes its own place to return to.
 void wm_hide(win_t *w) {
     if (w->hidden) return;
     CGPoint p;
     if (!ax_value(w->el, kAXPositionAttribute, kAXValueTypeCGPoint, &p)) return;
-    w->saved = p;
-    move(w, hide_point());
+    CGRect b = CGDisplayBounds(CGMainDisplayID());
+    w->saved = shown_return_point(p, b, w->has_saved, w->saved, CFAbsoluteTimeGetCurrent() - w->shown_at);
+    w->has_saved = true;
+    if (!shown_is_parked(p, b)) move(w, hide_point());
     w->hidden = true;
 }
 
+static void log_reshow(const win_t *w, CGPoint want, CGPoint got);
+
+// macOS and apps adjust a position they are asked for (the park point ends up to 41pt higher), and may not
+// have applied it yet: read it back once and ask again if it is elsewhere. Not while quitting, with its
+// short budget.
+static void recheck_position(win_t *w) {
+    CGPoint got;
+    if (shutting_down || !ax_value(w->el, kAXPositionAttribute, kAXValueTypeCGPoint, &got)) return;
+    if (!shown_missed(w->saved, got)) return;
+    log_reshow(w, w->saved, got);
+    move(w, w->saved);
+}
+
+// A window whose move failed counts as shown all the same: a busy app may still apply it late, and it must
+// then be parked again. One that stayed in the corner keeps its place the next time it is parked (wm_hide).
 static AXError show(win_t *w) {
     if (!w->hidden) return kAXErrorSuccess;
     AXError err = move(w, w->saved);
+    if (err == kAXErrorSuccess) recheck_position(w);
     w->hidden = false;
     w->shown_at = CFAbsoluteTimeGetCurrent();
     return err;
@@ -162,6 +181,14 @@ static void log_focus(const win_t *w, const char *reason, int to) {
     else snprintf(cur, sizeof cur, "%d->%d", cur_ws, to);
     os_log(ws_log(), "wid=%u app=%{public}s ws=%d reason=%{public}s trigger=%{public}s cur=%{public}s settling=%d stale=%d same_app_here=%d idle_ms=%lld",
            w->wid, app, w->ws, reason, trigger, cur, settling, w->wid == stale, here, idle);
+}
+
+static void log_reshow(const win_t *w, CGPoint want, CGPoint got) {
+    char app[128];
+    app_name(w->pid, app, sizeof app);
+    // parked=1: still in the corner, so the first move had not been applied; 0: it was put somewhere else.
+    os_log(ws_log(), "wid=%u app=%{public}s reason=reshow want=%d,%d found=%d,%d parked=%d", w->wid, app,
+           (int)want.x, (int)want.y, (int)got.x, (int)got.y, shown_is_parked(got, CGDisplayBounds(CGMainDisplayID())));
 }
 
 void wm_set_trigger(const char *what) { trigger = what; }

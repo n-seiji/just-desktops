@@ -8,6 +8,7 @@ typedef struct {
     uint32_t wid;
     int ws;
     CGPoint saved;
+    bool has_saved; // saved holds a place to return to
     bool hidden;
     double shown_at; // when show last unparked it
     bool was_listed; // WindowServer listed it the last time we looked

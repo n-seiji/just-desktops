@@ -30,5 +30,19 @@ CGPoint shown_park_point(CGRect display) {
 
 bool shown_is_parked(CGPoint p, CGRect display) {
     CGPoint h = shown_park_point(display);
-    return p.x >= h.x - 4 && p.y >= h.y - 64;
+    return p.x >= h.x - 32 && p.x <= h.x + 4 && p.y >= h.y - 64 && p.y <= h.y + 4;
+}
+
+CGPoint shown_safe_point(CGRect display) {
+    return CGPointMake(display.origin.x + 40, display.origin.y + 60);
+}
+
+CGPoint shown_return_point(CGPoint read, CGRect display, bool has_saved, CGPoint saved, double since_shown) {
+    if (shown_is_parked(read, display)) return has_saved ? saved : shown_safe_point(display);
+    if (has_saved && since_shown >= 0 && since_shown <= FRESH_S) return saved;
+    return read;
+}
+
+bool shown_missed(CGPoint want, CGPoint got) {
+    return fabs(want.x - got.x) > 1 || fabs(want.y - got.y) > 1;
 }

@@ -16,10 +16,23 @@ bool shown_visible(double alpha, CGRect window, const CGRect *displays, uint32_t
 bool shown_grace(bool listed, bool *was_listed, double now, double shown_at);
 
 // Windows of inactive desktops are parked at the bottom-right corner of the main display. This is
-// the point a window's origin is moved to, and whether an origin is (near) it: used to bring back
-// windows a crashed run left there.
+// the point a window's origin is moved to, and whether an origin is at it. macOS and apps keep some of
+// the window in reach, so a parked origin is seen up to 41pt above the point and 17pt left of it. An
+// origin past the corner is not parked: with a second display to the lower right it is in plain view.
 CGPoint shown_park_point(CGRect display);
 bool shown_is_parked(CGPoint origin, CGRect display);
+
+// Where a window found in the corner with no known place to return to is put: near the top-left of the display.
+CGPoint shown_safe_point(CGRect display);
+
+// The point to remember as a window's place when it is about to be parked; read is its position now. A
+// window in the corner, or one unparked at most FRESH_S ago (its app may not have applied the move yet, and
+// nobody places a window that fast), keeps the point it has; with none, a window in the corner gets the safe
+// point. Otherwise it is where the window is now.
+CGPoint shown_return_point(CGPoint read, CGRect display, bool has_saved, CGPoint saved, double since_shown);
+
+// Whether a window asked to go to want ended up elsewhere: more than 1pt off on either axis.
+bool shown_missed(CGPoint want, CGPoint got);
 
 // The window the menu bar marks: the one just focused by us until FRESH_S has passed, because the
 // focus macOS reports lags behind, else the reported one. 0 for none.

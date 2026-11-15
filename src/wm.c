@@ -130,13 +130,14 @@ static win_t *track(app_t *a, AXUIElementRef el) {
     CGPoint p;
     CGRect b = CGDisplayBounds(CGMainDisplayID());
     if (ax_value(el, kAXPositionAttribute, kAXValueTypeCGPoint, &p) && shown_is_parked(p, b)) {
-        CGPoint safe = CGPointMake(b.origin.x + 40, b.origin.y + 60);
+        CGPoint safe = shown_safe_point(b);
         // Only a window shown here is moved out. One of another desktop stays in the corner, parked, and
         // returns to the safe point when its desktop is shown.
         if (wm_here(w)) {
             ax_set_position(el, safe);
         } else {
             w->saved = safe;
+            w->has_saved = true;
             w->hidden = true;
         }
         wm_log_recover(w);

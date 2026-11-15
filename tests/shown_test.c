@@ -33,6 +33,19 @@ static void front(const char *what, double now, double until, uint32_t fresh, ui
     failed++;
 }
 
+static void same_point(const char *what, CGPoint got, CGPoint want) {
+    if (got.x == want.x && got.y == want.y) return;
+    printf("FAIL %s = {%g,%g}; want {%g,%g}\n", what, got.x, got.y, want.x, want.y);
+    failed++;
+}
+
+static void missed(const char *what, CGPoint want, CGPoint got, bool expect) {
+    bool m = shown_missed(want, got);
+    if (m == expect) return;
+    printf("FAIL shown_missed(%s) = %d; want %d\n", what, m, expect);
+    failed++;
+}
+
 int main(void) {
     CGRect main_display = {{0, 0}, {1920, 1212}};
     CGRect second = {{1920, 0}, {1280, 800}};
@@ -69,12 +82,51 @@ int main(void) {
         failed++;
     }
     parked("the park point", (CGPoint){1919, 1211}, true);
-    parked("4pt left of it", (CGPoint){1915, 1211}, true);
-    parked("5pt left of it", (CGPoint){1914, 1211}, false);
+    parked("17pt left of it, as iPhone Mirroring stays", (CGPoint){1902, 1211}, true);
+    parked("32pt left of it", (CGPoint){1887, 1211}, true);
+    parked("33pt left of it", (CGPoint){1886, 1211}, false);
+    parked("where macOS leaves it, 41pt up", (CGPoint){1919, 1170}, true);
     parked("64pt above it", (CGPoint){1919, 1147}, true);
     parked("65pt above it", (CGPoint){1919, 1146}, false);
     parked("a normal window", (CGPoint){100, 100}, false);
-    parked("past the corner", (CGPoint){2500, 1500}, true);
+    parked("4pt right of it", (CGPoint){1923, 1211}, true);
+    parked("5pt right of it, on a display to the right", (CGPoint){1924, 1211}, false);
+    parked("4pt below it", (CGPoint){1919, 1215}, true);
+    parked("5pt below it", (CGPoint){1919, 1216}, false);
+    parked("past the corner, on a display to the lower right", (CGPoint){2500, 1500}, false);
+
+    same_point("shown_safe_point", shown_safe_point(main_display), (CGPoint){40, 60});
+    same_point("shown_safe_point, second display", shown_safe_point(second), (CGPoint){1960, 60});
+
+    CGPoint at = {300, 200}, old = {50, 70}, corner = {1919, 1211};
+    CGPoint safe = {40, 60};
+    same_point("return: in the corner, has a place", shown_return_point(corner, main_display, true, old, 99), old);
+    same_point("return: in the corner, fresh, has a place", shown_return_point(corner, main_display, true, old, 0.1), old);
+    same_point("return: in the corner, no place", shown_return_point(corner, main_display, false, old, 99), safe);
+    same_point("return: in the corner, no place, fresh", shown_return_point(corner, main_display, false, old, 0.1), safe);
+    same_point("return: fresh, has a place", shown_return_point(at, main_display, true, old, 0.1), old);
+    same_point("return: unparked just now", shown_return_point(at, main_display, true, old, 0), old);
+    same_point("return: exactly FRESH_S", shown_return_point(at, main_display, true, old, FRESH_S), old);
+    same_point("return: just over FRESH_S", shown_return_point(at, main_display, true, old, FRESH_S + 0.001), at);
+    same_point("return: long ago", shown_return_point(at, main_display, true, old, 99), at);
+    same_point("return: fresh, no place", shown_return_point(at, main_display, false, old, 0.1), at);
+    same_point("return: never unparked", shown_return_point(at, main_display, false, old, 1e12), at);
+    same_point("return: negative since_shown", shown_return_point(at, main_display, true, old, -1), at);
+
+    CGPoint past = {2500, 1500};
+    same_point("return: past the corner, on a display to the lower right", shown_return_point(past, main_display, true, old, 99), past);
+    same_point("return: never unparked, has a place", shown_return_point(at, main_display, true, old, 1e12), at);
+
+    missed("same point", (CGPoint){100, 100}, (CGPoint){100, 100}, false);
+    missed("1pt off in x", (CGPoint){100, 100}, (CGPoint){101, 100}, false);
+    missed("1pt off in x, other way", (CGPoint){100, 100}, (CGPoint){99, 100}, false);
+    missed("1.5pt off in x", (CGPoint){100, 100}, (CGPoint){101.5, 100}, true);
+    missed("1.5pt off in x, other way", (CGPoint){100, 100}, (CGPoint){98.5, 100}, true);
+    missed("1pt off in y", (CGPoint){100, 100}, (CGPoint){100, 101}, false);
+    missed("1pt off in y, other way", (CGPoint){100, 100}, (CGPoint){100, 99}, false);
+    missed("1.5pt off in y", (CGPoint){100, 100}, (CGPoint){100, 101.5}, true);
+    missed("1.5pt off in y, other way", (CGPoint){100, 100}, (CGPoint){100, 98.5}, true);
+    missed("40pt up", (CGPoint){100, 1242}, (CGPoint){100, 1202}, true);
 
     puts(failed ? "FAILED" : "ok");
     return failed != 0;
