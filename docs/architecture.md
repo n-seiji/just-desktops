@@ -32,6 +32,8 @@ Events come in from three places: Accessibility observers (window created, destr
 
 After every change `wm_refresh_ui` reads the focused window once, then calls `border_show` or `border_hide` and `menubar_update`. The switchers pull a fresh list from `wm_windows` when they open and call `wm_focus_wid` to commit. Nothing outside `wm*.c` writes window state.
 
+A desktop switch holds the screen still (`SLSDisableUpdate`) while it unparks the new desktop's windows and parks the old one's, and lets it go once WindowServer has every moved window where it was sent (polled every 8 ms, for at most 0.3 s after the moves were asked for). Each move is a round trip to the window's app, and WindowServer shows it some tens of ms after Accessibility reports it done, so without the hold a switch shows windows leaving and popping in one by one. Input goes to the new desktop's window from the start. If the moves themselves take more than 0.6 s (a hung app), the hold is dropped and they go on in view.
+
 ## Leaving and restarting
 
 Every way out calls one function in `main.m`, and only the first call does anything: `jd_quit` (menu, signals), `jd_restart` (settings change), `NSApplicationWillTerminateNotification` (the Quit Apple Event that `brew upgrade`, logout and Activity Monitor send to the app), and the keyboard tap failing at start. There is no `atexit` handler, because a second instance that exits on the lock must not run it.

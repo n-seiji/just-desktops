@@ -22,8 +22,9 @@ CGRect shown_park_display(const CGRect *displays, uint32_t n);
 
 // Windows of inactive desktops are parked at the bottom-right corner of the park display. This is
 // the point a window's origin is moved to, and whether an origin is at it. macOS and apps keep some of
-// the window in reach, so a parked origin is seen up to 41pt above the point and 17pt left of it. An
-// origin past the corner is not parked: with a second display to the lower right it is in plain view.
+// the window in reach, so a parked origin has been seen up to 77pt above the point and 17pt left of it
+// (iPhone Mirroring; most windows stop 41pt above).
+// An origin past the corner is not parked: with a second display to the lower right it is in plain view.
 CGPoint shown_park_point(CGRect display);
 bool shown_is_parked(CGPoint origin, CGRect display);
 

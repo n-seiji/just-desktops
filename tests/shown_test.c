@@ -26,6 +26,7 @@ static void parked(const char *what, CGPoint p, bool want) {
     failed++;
 }
 
+
 static void front(const char *what, double now, double until, uint32_t fresh, uint32_t focused, uint32_t want) {
     uint32_t got = shown_front(now, until, fresh, focused);
     if (got == want) return;
@@ -145,8 +146,9 @@ int main(void) {
     parked("32pt left of it", (CGPoint){1887, 1211}, true);
     parked("33pt left of it", (CGPoint){1886, 1211}, false);
     parked("where macOS leaves it, 41pt up", (CGPoint){1919, 1170}, true);
-    parked("64pt above it", (CGPoint){1919, 1147}, true);
-    parked("65pt above it", (CGPoint){1919, 1146}, false);
+    parked("17pt left and 77pt up, as iPhone Mirroring settles", (CGPoint){1902, 1134}, true);
+    parked("96pt above it", (CGPoint){1919, 1115}, true);
+    parked("97pt above it", (CGPoint){1919, 1114}, false);
     parked("a normal window", (CGPoint){100, 100}, false);
     parked("4pt right of it", (CGPoint){1923, 1211}, true);
     parked("5pt right of it, on a display to the right", (CGPoint){1924, 1211}, false);

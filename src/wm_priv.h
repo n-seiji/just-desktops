@@ -11,6 +11,7 @@ typedef struct {
     bool has_saved; // saved holds a place to return to
     bool hidden;
     double shown_at; // when show last unparked it
+    double parked_at; // when wm_hide last moved it to the corner
     bool was_listed; // WindowServer listed it the last time we looked
     bool minimized;  // kept from the (de)miniaturize notifications: asking a hung app costs a timeout per window
 } win_t;
@@ -43,6 +44,11 @@ void wm_log_recover(const win_t *w); // os_log a window found parked by a previo
 
 // wm_list.c: the display windows are parked at the corner of (see shown_park_display); the main display if none is listed
 CGRect wm_park_display(void);
+
+// Whether WindowServer has every window moved at or after `since` where it was sent: the unparked ones out
+// of the corner, the parked ones in it. Accessibility reports a move as done at once; the window itself
+// follows some tens of ms later. True when WindowServer cannot be asked.
+bool wm_in_place(double since);
 
 // wm_list.c: window lists and the menu bar
 void wm_refresh_menubar(win_t *f);

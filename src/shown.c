@@ -42,7 +42,7 @@ CGPoint shown_park_point(CGRect display) {
 
 bool shown_is_parked(CGPoint p, CGRect display) {
     CGPoint h = shown_park_point(display);
-    return p.x >= h.x - 32 && p.x <= h.x + 4 && p.y >= h.y - 64 && p.y <= h.y + 4;
+    return p.x >= h.x - 32 && p.x <= h.x + 4 && p.y >= h.y - 96 && p.y <= h.y + 4;
 }
 
 CGPoint shown_safe_point(CGRect display) {

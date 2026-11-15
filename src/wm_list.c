@@ -94,6 +94,38 @@ static bool is_shown(CFArrayRef shown, const displays_t *ds, uint32_t wid) {
     return false;
 }
 
+bool wm_in_place(double since) {
+    const void **ids = malloc(sizeof *ids * (nwins ? nwins : 1));
+    if (!ids) return true;
+    CFIndex n = 0;
+    for (int i = 0; i < nwins; i++) {
+        const win_t *w = &wins[i];
+        bool came = wm_here(w) && !w->hidden && w->shown_at >= since;
+        bool went = w->hidden && w->parked_at >= since;
+        // The array holds the ids themselves, as pointer-sized values with no callbacks.
+        if ((came || went) && !w->minimized && !apps_hidden(w->pid)) ids[n++] = (const void *)(uintptr_t)w->wid;
+    }
+    CFArrayRef want = n ? CFArrayCreate(kCFAllocatorDefault, ids, n, NULL) : NULL;
+    free(ids);
+    CFArrayRef info = want ? CGWindowListCreateDescriptionFromArray(want) : NULL;
+    if (want) CFRelease(want);
+    if (!info) return true;
+    CGRect park = wm_park_display();
+    bool ok = true;
+    for (CFIndex i = 0; ok && i < CFArrayGetCount(info); i++) {
+        CFDictionaryRef d = CFArrayGetValueAtIndex(info, i);
+        CFNumberRef num = CFDictionaryGetValue(d, kCGWindowNumber);
+        CFDictionaryRef b = CFDictionaryGetValue(d, kCGWindowBounds);
+        CGRect r;
+        int64_t id = 0;
+        if (!num || !b || !CFNumberGetValue(num, kCFNumberSInt64Type, &id) || !CGRectMakeWithDictionaryRepresentation(b, &r)) continue;
+        const win_t *w = wm_find_win((uint32_t)id);
+        if (w) ok = shown_is_parked(r.origin, park) == w->hidden;
+    }
+    CFRelease(info);
+    return ok;
+}
+
 // On this desktop, not minimized or parked.
 static bool on_desk(const win_t *w) {
     return wm_here(w) && !w->hidden && !w->minimized;
