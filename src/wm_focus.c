@@ -106,11 +106,14 @@ static AXError show(win_t *w) {
     return err;
 }
 
-static void focus(win_t *w) {
+// False when the app did not answer: it is hung, and the focus stays where it was. Other errors are not
+// counted: some apps report one for a window they focus all the same.
+static bool focus(win_t *w) {
     app_t *a = wm_find_app(w->pid);
-    if (a) AXUIElementSetAttributeValue(a->el, kAXFrontmostAttribute, kCFBooleanTrue);
-    AXUIElementSetAttributeValue(w->el, kAXMainAttribute, kCFBooleanTrue);
-    AXUIElementPerformAction(w->el, kAXRaiseAction);
+    AXError front = a ? AXUIElementSetAttributeValue(a->el, kAXFrontmostAttribute, kCFBooleanTrue) : kAXErrorSuccess;
+    AXError main = AXUIElementSetAttributeValue(w->el, kAXMainAttribute, kCFBooleanTrue);
+    AXError raise = AXUIElementPerformAction(w->el, kAXRaiseAction);
+    return front != kAXErrorCannotComplete && main != kAXErrorCannotComplete && raise != kAXErrorCannotComplete;
 }
 
 // A window that can be given focus: a minimized one cannot.
@@ -120,10 +123,12 @@ static win_t *first_in(int ws) {
     return NULL;
 }
 
-static win_t *focus_in_current(void) {
+// *took (may be NULL): the window returned was given the focus, see focus.
+static win_t *focus_in_current(bool *took) {
     win_t *t = wm_find_win(last_focus[cur_ws]);
     if (!t || t->ws != cur_ws || t->minimized) t = first_in(cur_ws);
-    if (t) focus(t);
+    bool ok = t && focus(t);
+    if (took) *took = ok;
     return t;
 }
 
@@ -384,7 +389,7 @@ static void on_focus(bool recheck) {
         switch (focus_act(settling, recheck, w->wid == stale, first_in(cur_ws) != NULL, user_call)) {
         case FOCUS_REFOCUS:
             log_focus(w, "refocus", cur_ws);
-            focus_in_current();
+            focus_in_current(NULL);
             return;
         case FOCUS_STALE:
             stale = w->wid;
@@ -433,10 +438,18 @@ static void hide_every(void) {
 }
 
 // t is the window focused after the change, or NULL.
-static void finish_change(const win_t *t) {
+static void finish_change(win_t *t, bool took) {
     wm_settle();
     wm_mark_fresh(t ? t->wid : 0, settle_start);
-    wm_refresh_ui();
+    // Drawn for t, not for what macOS reports: it names the window focused before for a moment yet, and the
+    // ring would be missing when a switch lets the screen go. Not when t's app did not answer: asking it for
+    // the ring's place would wait out another timeout, and the ring belongs to the window that kept the focus.
+    if (!took) {
+        wm_refresh_ui();
+    } else if (config_border() || menubar_ready()) {
+        refresh_border(t);
+        wm_refresh_menubar(t);
+    }
     refresh_menubar_later();
 }
 
@@ -499,11 +512,22 @@ void wm_switch(int ws) {
             wm_hide(&wins[i]);
         }
 
-    win_t *t = focus_in_current();
+    bool took;
+    win_t *t = focus_in_current(&took);
     hide_every();
-    finish_change(t);
+    finish_change(t, took);
     if (began) hold_polls = (int)(HOLD_MAX_S / HOLD_POLL_S);
-    if (holding) release_when_in_place(gen);
+    if (holding) {
+        // Giving focus and drawing the ring above usually outlast WindowServer: look now, before the first poll,
+        // which would also queue behind the focus notices this switch set off. The strip goes out first: AppKit
+        // would send it only after this pass of the run loop.
+        if (wm_in_place(held_since)) {
+            menubar_flush();
+            release_screen();
+        } else {
+            release_when_in_place(gen);
+        }
+    }
 }
 
 // The displays changed, so the park corner may have moved: parked windows go to the new one. Their
@@ -534,9 +558,10 @@ void wm_dismiss_every(void) {
     pid_t pid = apps_frontmost();
     if (!every_app(pid)) return;
     trigger = "hotkey";
-    win_t *t = focus_in_current();
+    bool took;
+    win_t *t = focus_in_current(&took);
     if (apps_hide(pid)) log_hide(pid);
-    finish_change(t);
+    finish_change(t, took);
 }
 
 void wm_move_focused(int ws) {
@@ -558,7 +583,7 @@ void wm_move_focused(int ws) {
     }
     wm_hide(w);
     stale = w->wid;
-    focus_in_current();
+    focus_in_current(NULL);
     wm_settle();
     wm_refresh_ui();
 }
