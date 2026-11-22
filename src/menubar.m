@@ -1,5 +1,6 @@
 #import <AppKit/AppKit.h>
 #import <CoreText/CoreText.h>
+#import <QuartzCore/QuartzCore.h>
 #include "menubar.h"
 #include "menubar_priv.h"
 #include "strip.h"
@@ -193,6 +194,12 @@ void menubar_init(menubar_mode_t m) {
     item.button.action = @selector(clicked:);
     [item.button sendActionOn:NSEventMaskLeftMouseUp | NSEventMaskRightMouseUp];
     if (mode == MB_ICON) item.button.image = icon_image();
+}
+
+void menubar_flush(void) {
+    if (!item) return;
+    [item.button displayIfNeeded];
+    [CATransaction flush];
 }
 
 void menubar_update(int ws, const pid_t *pids, const uint32_t *wids, int n, int over, uint32_t over_hash, uint32_t front) {
