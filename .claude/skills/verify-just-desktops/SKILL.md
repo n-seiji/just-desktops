@@ -25,20 +25,27 @@ An ad-hoc build has no Accessibility grant and macOS asks again after every rebu
 
 ```sh
 id=$(security find-identity -v -p codesigning | sed -n 's/.*"\(Developer ID Application: .*\)"/\1/p' | head -1)
-CODESIGN_IDENTITY="$id" mise run app          # dist/just-desktops.app
-pgrep -fl just-desktops                        # note the path of the instance you are about to replace
-for p in $(pgrep -x just-desktops); do kill -TERM "$p"; done   # a clean quit: it saves desktops and unparks
-dist/just-desktops.app/Contents/MacOS/just-desktops > "$TMPDIR/jd-run.log" 2>&1 &
+CODESIGN_IDENTITY="$id" mise run app
+rm -rf "$TMPDIR/jd-test" && mkdir "$TMPDIR/jd-test" && cp -R dist/just-desktops.app "$TMPDIR/jd-test/"
+ps -axo pid=,comm= | grep '/just-desktops$'     # note the pid and the .app (or binary) path you are about to replace
+kill -TERM <that pid>                            # a clean quit: it saves desktops and unparks
+while pgrep -x just-desktops >/dev/null; do sleep 0.1; done
+open "$TMPDIR/jd-test/just-desktops.app"
 ```
 
-Start the new instance within 60 seconds of the quit and every window returns to its desktop (see "Leaving and restarting" in `docs/architecture.md`). With no Developer ID in the keychain, stop and tell the user: do not grant Accessibility to a terminal or an ad-hoc binary for them.
+- Run the copy, not `dist/`: `mise run app` and the gate delete `dist/just-desktops.app` on every build and leave an ad-hoc one.
+- Wait for the old instance to exit. It holds the lock for up to 2.5 seconds while it unparks, and a new one started meanwhile exits at once.
+- Start it with `open`, so that macOS checks the app's own grant. Started from a shell, it would run on the terminal's.
+- Start it within 60 seconds of the quit and every window returns to its desktop (see "Leaving and restarting" in `docs/architecture.md`).
+- With no Developer ID in the keychain, stop and tell the user. Do not grant Accessibility to an ad-hoc binary for them.
+- If the user runs the CLI as a LaunchAgent (`launchctl print gui/$(id -u)/com.just-desktops` finds it), stop it with `mise run unservice` and put it back with `mise run service`.
 
 This takes over the user's screen, mouse and keyboard for a few seconds per run. Say so before you start.
 
 ## Doctor
 
 ```sh
-pgrep -fl just-desktops    # exactly one, at the path you launched
+ps -axo pid=,comm= | grep '/just-desktops$'    # exactly one, at the path you launched
 /usr/bin/log show --last 1m --predicate 'subsystem == "dev.n-seiji.just-desktops"' --style compact | tail
 ```
 
@@ -46,7 +53,7 @@ A healthy start logs one `reason=track trigger=start` or `reason=restore-file` l
 
 ## Drive
 
-Build the helper once per session:
+Build the helper once per session. It posts keys and clicks, so the terminal you run it from needs Accessibility. If it has none, ask the user: that grant is theirs to give.
 
 ```sh
 clang .claude/skills/verify-just-desktops/drive.c -o "$TMPDIR/jd-drive" -framework ApplicationServices
@@ -54,7 +61,7 @@ clang .claude/skills/verify-just-desktops/drive.c -o "$TMPDIR/jd-drive" -framewo
 
 | Command | What it does |
 | --- | --- |
-| `jd-drive key 18` | Presses `⌥1` (18 is the key code of `1`). The desktop keys are in `~/.config/just-desktops/config`. |
+| `jd-drive key 18` | Presses `⌥1` (18 is the key code of `1`). It always sends `⌥`, so it fits only the default `modifier`. The desktop keys are in `~/.config/just-desktops/config`. |
 | `jd-drive click <x> <y>` | Left click, in global display points. |
 | `jd-drive mc` | Prints `1` while Mission Control is up or zooming out. |
 | `jd-drive windows` | Lists on-screen windows above layer 0. |
@@ -79,12 +86,13 @@ Read the contact sheet and count frames from the click to the settled screen. To
 
 ## Cleanup
 
-Kill only the instance you started, by its pid, then put the user's instance back and check it is the one running:
+Quit the instance you started, by its pid, wait for it to exit, then put the user's instance back and check it is the one running:
 
 ```sh
 kill -TERM <pid you started>
-open <path noted in Launch>            # by path: the test build shares the bundle id, so `open -b` may pick it
-pgrep -fl just-desktops
+while pgrep -x just-desktops >/dev/null; do sleep 0.1; done
+open <the .app noted in Launch>       # by path: the test build shares the bundle id, so `open -b` may pick it
+ps -axo pid=,comm= | grep '/just-desktops$'
 ```
 
-If the user should keep the fixed build for now, copy it out of `dist/` first: `mise run app` deletes `dist/just-desktops.app` on every build. Tell them which build is running. Recordings and sheets stay in `$TMPDIR`.
+If the user wants to keep the test build running for now, leave it and tell them which build is running and where it is. Recordings and sheets stay in `$TMPDIR`.

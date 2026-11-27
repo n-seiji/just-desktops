@@ -186,7 +186,7 @@ Needs the Xcode Command Line Tools and [mise](https://mise.jdx.dev). Use `mise r
 
 - Multiple displays are lightly tested. Where windows are parked and how displays share desktops: [Workspaces](docs/workspaces.md#desktops-and-keys).
 - SkyLight is a private Apple API, so a macOS update can break the border.
-- After a crash, parked windows stay in the bottom-right corner until the next launch ([Workspaces](docs/workspaces.md#desktops-and-keys)).
+- After a crash, parked windows stay in the bottom-right corner until the next launch moves them back ([Workspaces](docs/workspaces.md#desktops-and-keys)).
 - Only the desktop keys and the base modifier are configurable.
 
 ## License

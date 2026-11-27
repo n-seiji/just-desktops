@@ -12,8 +12,12 @@ Each one names how a user reaches the feature, how to drive it, and what proves 
 
 - **Reach.** Open Mission Control and click a window that belongs to another desktop.
 - **Drive.** `jd-drive key 18`, wait 1.2 s, `open -a "Mission Control"`, wait 1 s, `jd-drive click <x> <y>` on the thumbnail.
-- **Proof.** One `reason=follow trigger=ax-focus cur=1->N` line, and in the recording a single zoom that lands on the new desktop within about 6 frames at 16 fps, with no striped frames.
-- **Gotchas.** Thumbnails move between runs, so take the point from a fresh frame. A click on a window of the current desktop logs nothing. The detection relies on WindowManager's layer 19 window, seen on macOS 27.2.1 only.
+- **Proof.** One `reason=follow trigger=ax-focus cur=1->N` line and the new desktop on screen in the recording.
+- **Gotchas.**
+  - A posted click is not a hardware click to just-desktops: `CGEventSourceSecondsSinceLastEventType` does not count it (measured with `CGEventPost` and `IOHIDPostEvent`). So this journey takes the 0.3 s path: a zoom to the old desktop, then the switch. The at-once path, one zoom that lands on the new desktop with no striped frames, needs a real click. Ask the user to click, and record while they do.
+  - For the same reason a posted click is never "you calling a window" during a quiet period. Wait 4 s after a switch before the click.
+  - Thumbnails move between runs, so take the point from a fresh frame. A click on a window of the current desktop logs nothing.
+  - Mission Control is recognised by WindowManager's display-sized layer 19 window, seen on macOS 27.2.1 only.
 
 ## Not driven yet
 
