@@ -22,6 +22,13 @@ int main(void) {
         {"the window just parked, at recheck", false, true, true, true, false, FOCUS_IGNORE},
         {"parked window at recheck", false, true, false, true, false, FOCUS_REFOCUS},
         {"parked window at recheck, desktop empty", false, true, false, false, false, FOCUS_STALE},
+        {"user call while settling", true, false, false, true, true, FOCUS_FOLLOW},
+        {"user call at recheck", false, true, false, true, true, FOCUS_FOLLOW},
+        {"user call at recheck, desktop empty", false, true, false, false, true, FOCUS_FOLLOW},
+        {"user call while settling, at recheck", true, true, false, true, true, FOCUS_FOLLOW},
+        {"user call for the window just parked", false, false, true, true, true, FOCUS_IGNORE},
+        {"user call for the window just parked, while settling", true, false, true, true, true, FOCUS_IGNORE},
+        {"user call for the window just parked, at recheck", false, true, true, true, true, FOCUS_IGNORE},
     };
     for (unsigned i = 0; i < sizeof t / sizeof t[0]; i++) {
         focus_act_t got = focus_act(t[i].settling, t[i].recheck, t[i].is_stale, t[i].cur_has_win, t[i].user_call);

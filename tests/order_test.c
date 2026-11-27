@@ -25,10 +25,10 @@ static void split(int n, int slots, int want_shown, int want_over) {
     failed++;
 }
 
-static void hash(const char *what, const uint32_t *ids, int n, uint32_t want) {
-    uint32_t got = order_hash(ids, n);
-    if (got == want) return;
-    printf("FAIL order_hash(%s) = %u; want %u\n", what, got, want);
+// The overflow list goes stale when the hidden ids change, so equal lists must hash equal and changed ones must not.
+static void hash(const char *what, const uint32_t *a, int na, const uint32_t *b, int nb, bool same) {
+    if ((order_hash(a, na) == order_hash(b, nb)) == same) return;
+    printf("FAIL order_hash(%s) %s\n", what, same ? "differs for equal ids" : "is equal for different ids");
     failed++;
 }
 
@@ -48,13 +48,14 @@ int main(void) {
     split(11, 10, 9, 2);
     split(64, 10, 9, 55);
 
-    hash("no ids", (uint32_t[]){0}, 0, 2166136261u);
-    hash("one id", (uint32_t[]){1}, 1, 67918732u);
-    hash("two ids", (uint32_t[]){7, 9}, 2, 2825860797u);
-    if (order_hash((uint32_t[]){7, 9}, 2) == order_hash((uint32_t[]){9, 7}, 2)) {
-        printf("FAIL order_hash ignores the order of the ids\n");
-        failed++;
-    }
+    hash("same ids", (uint32_t[]){7, 9}, 2, (uint32_t[]){7, 9}, 2, true);
+    hash("no ids", (uint32_t[]){0}, 0, (uint32_t[]){5}, 0, true);
+    hash("order of the ids", (uint32_t[]){7, 9}, 2, (uint32_t[]){9, 7}, 2, false);
+    hash("one id replaced", (uint32_t[]){7, 9}, 2, (uint32_t[]){7, 10}, 2, false);
+    hash("first id replaced", (uint32_t[]){7, 9}, 2, (uint32_t[]){8, 9}, 2, false);
+    hash("id dropped", (uint32_t[]){7, 9}, 2, (uint32_t[]){7}, 1, false);
+    hash("id added", (uint32_t[]){7, 9}, 2, (uint32_t[]){7, 9, 11}, 3, false);
+    hash("some ids against none", (uint32_t[]){7}, 1, (uint32_t[]){0}, 0, false);
 
     puts(failed ? "FAILED" : "ok");
     return failed != 0;

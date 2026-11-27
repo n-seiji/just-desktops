@@ -299,6 +299,16 @@ int main(void) {
         printf("FAIL unknown values: border %d switcher %d menubar %d modifier %llx; want the defaults 1 %d %d option\n", config_border(), config_switcher_style(), config_menubar(), (unsigned long long)config_modifier(), SW_LIST, MB_OFF);
         failed++;
     }
+    // a pin to a desktop number higher than the number of keys is ignored, wherever the keys line stands
+    load_text("com.x.early = 3\nkeys = a s\ncom.x.first = 1\ncom.x.last = 2\ncom.x.above = 3\ncom.x.far = 10\n");
+    check_pin("com.x.first", 1);
+    check_pin("com.x.last", 2);
+    check_pin("com.x.above", 0);
+    check_pin("com.x.early", 0);
+    check_pin("com.x.far", 0);
+    load_text("com.x.sixth = 6\ncom.x.seventh = 7\n"); // the default keys are six
+    check_pin("com.x.sixth", 6);
+    check_pin("com.x.seventh", 0);
     // menubar default and the app's rule that there is always an item
     static const struct { bool app; const char *file; menubar_mode_t want; } mb[] = {
         {false, NULL, MB_OFF}, {false, "menubar = on\n", MB_STRIP}, {false, "menubar = icon\n", MB_ICON},

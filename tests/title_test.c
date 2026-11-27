@@ -42,11 +42,11 @@ static void check_labels(const char *app, const char *titles[], int n, const cha
 }
 
 int main(void) {
-    check("just-desktops ⌥Tab スイッチャー案 - Google Chrome - Seiji", "Google Chrome", "just-desktops ⌥Tab スイッチャー案");
-    check("product-sre（チャンネル） - miive - Slack", "Slack", "product-sre（チャンネル） - miive");
+    check("side-project ⌥Tab ウィンドウ一覧の案 - Google Chrome - Pat", "Google Chrome", "side-project ⌥Tab ウィンドウ一覧の案");
+    check("team-ops（チャンネル） - acme - Slack", "Slack", "team-ops（チャンネル） - acme");
     check("Claude", "Claude", NULL);
-    check("Release Notes: 1.142.0 — sijis", "Code", "Release Notes: 1.142.0 — sijis");
-    check("Seijis-MacBook-Air.local: ------", "Ghostty", "Seijis-MacBook-Air.local: ------");
+    check("Release Notes: 1.142.0 — example", "Code", "Release Notes: 1.142.0 — example");
+    check("Pats-MacBook-Air.local: ------", "Ghostty", "Pats-MacBook-Air.local: ------");
     check("Inbox – Mail – Gmail", "gmail", "Inbox – Mail");
     check("Docs — Notes — Notes", "Notes", "Docs");
     check("Slack - Slack", "Slack", NULL);

@@ -36,7 +36,7 @@ static void test_start(void) {
 }
 
 static void test_top(void) {
-    eq("sel_top(in view)", sel_top(2, 4, 3), 2);
+    eq("sel_top(middle row of the view)", sel_top(2, 3, 3), 2);
     eq("sel_top(first row of the view)", sel_top(2, 2, 3), 2);
     eq("sel_top(last row of the view)", sel_top(2, 4, 3), 2);
     eq("sel_top(one past the view)", sel_top(2, 5, 3), 3);
