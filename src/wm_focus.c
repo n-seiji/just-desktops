@@ -343,9 +343,15 @@ static void follow_check_now(uint32_t wid, const char *why, bool user_call) {
     }
 }
 
+// A window picked in Mission Control is a call with no doubt about it, and Mission Control is zooming back out
+// to the old desktop: the switch goes at once, so that the zoom lands on the new one.
 static void follow_later(uint32_t wid, bool user_call) {
     unsigned gen = ++follow_gen;
     const char *why = trigger;
+    if (wm_mission_control_up()) {
+        follow_check_now(wid, why, user_call);
+        return;
+    }
     run_after(FOLLOW_DELAY_S, ^{
         if (gen == follow_gen) follow_check_now(wid, why, user_call);
     });
@@ -459,7 +465,8 @@ static void finish_change(win_t *t, bool took) {
 // window where it was sent, or HOLD_MAX_S after the moves were asked for (counted in polls, so a clock step
 // cannot stretch it). Switches in quick succession share one hold. A hung app must not freeze every screen
 // while its call times out: past HOLD_BUSY_S the moves go on in view. WindowServer itself lets go after about
-// a second.
+// a second. Under Mission Control's zoom there is no hold: letting go in the middle of it tears the screen
+// into stripes, and the zoom covers the moves anyway.
 #define HOLD_POLL_S 0.008
 #define HOLD_MAX_S 0.3
 #define HOLD_BUSY_S 0.6
@@ -496,7 +503,7 @@ void wm_switch(int ws) {
     cur_ws = ws;
     stale = f && f->ws == old ? f->wid : 0;
     unsigned gen = ++hold_gen;
-    bool began = !holding && SLSDisableUpdate(SLSMainConnectionID()) == kCGErrorSuccess;
+    bool began = !holding && !wm_mission_control_up() && SLSDisableUpdate(SLSMainConnectionID()) == kCGErrorSuccess;
     if (began) {
         holding = true;
         held_since = CFAbsoluteTimeGetCurrent();

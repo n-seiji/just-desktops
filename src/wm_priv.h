@@ -49,6 +49,7 @@ CGRect wm_park_display(void);
 // of the corner, the parked ones in it. Accessibility reports a move as done at once; the window itself
 // follows some tens of ms later. True when WindowServer cannot be asked.
 bool wm_in_place(double since);
+bool wm_mission_control_up(void);
 
 // wm_list.c: window lists and the menu bar
 void wm_refresh_menubar(win_t *f);

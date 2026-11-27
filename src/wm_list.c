@@ -52,6 +52,26 @@ static CFArrayRef shown_windows(void) {
                                       kCGNullWindowID);
 }
 
+// Mission Control is up, or still zooming back out. WindowManager keeps a shield window over the display at
+// this level the whole time (seen on macOS 27; a macOS that draws Mission Control some other way reads as
+// not up, and a switch goes as it does anywhere else). The owner name needs no Screen Recording permission.
+#define MISSION_CONTROL_LAYER 19
+bool wm_mission_control_up(void) {
+    CFArrayRef shown = shown_windows();
+    if (!shown) return false;
+    bool up = false;
+    for (CFIndex i = 0; i < CFArrayGetCount(shown) && !up; i++) {
+        CFDictionaryRef d = CFArrayGetValueAtIndex(shown, i);
+        CFStringRef owner = CFDictionaryGetValue(d, kCGWindowOwnerName);
+        CFNumberRef n = CFDictionaryGetValue(d, kCGWindowLayer);
+        int layer = 0;
+        up = owner && n && CFNumberGetValue(n, kCFNumberIntType, &layer) && layer == MISSION_CONTROL_LAYER &&
+             CFEqual(owner, CFSTR("WindowManager"));
+    }
+    CFRelease(shown);
+    return up;
+}
+
 typedef struct { CGRect r[8]; uint32_t n; } displays_t;
 
 // Read once per list build, not per window.
