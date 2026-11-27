@@ -24,7 +24,7 @@ Each one names how a user reaches the feature, how to drive it, and what proves 
 - **Reach.** Open Mission Control, then hold `⌥` and press a desktop key.
 - **Drive.** `open -a "Mission Control"`, wait 1 s, `jd-drive key 19`.
 - **Proof.** No torn frame in the recording, and after Mission Control closes the other desktop's windows are on screen. Mission Control keeps showing the thumbnails it opened with.
-- **Gotchas.** `jd-drive mc` is also 1 in App Exposé (`open -a "Mission Control" --args 2`), which uses the same shield window, and 0 in Show Desktop (`--args 1`).
+- **Gotchas.** `jd-drive mc` is also 1 in App Exposé (`open -a "Mission Control" --args 2`), which uses the same shield window, and 0 in Show Desktop (`--args 1`). It stays 0 with Stage Manager on (`defaults write com.apple.WindowManager GloballyEnabled -bool true`, read back and restored after).
 
 ## Not driven yet
 
