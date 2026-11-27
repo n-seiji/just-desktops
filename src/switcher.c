@@ -7,9 +7,7 @@
 #include "swkit.h"
 #include "wm.h"
 #include <dispatch/dispatch.h>
-#include <malloc/malloc.h>
 #include <math.h>
-#include <stdio.h>
 #include <stdlib.h>
 
 // Window switcher panel (hold ⌥, press Tab; with `switcher = off` no panel, see instant_step). The windows, their contexts, the fonts,
@@ -75,9 +73,7 @@ static CGFloat fit_width(void) {
 }
 
 static void draw_header(CGContextRef c) {
-    char buf[32];
-    snprintf(buf, sizeof buf, "Desktop %d", wm_current());
-    CFStringRef s = CFStringCreateWithCString(NULL, buf, kCFStringEncodingUTF8);
+    CFStringRef s = sw_desktop_title(wm_current());
     sw_put(c, sw_fit(fonts[F_HEADER], s, pal->header, size.width - 2 * (ROW_INSET + ROW_PAD), kCTLineTruncationEnd), ROW_INSET + ROW_PAD, 19);
     CFRelease(s);
 }
@@ -142,10 +138,7 @@ static void close_panel(void) {
         if (fonts[i]) CFRelease(fonts[i]);
         fonts[i] = NULL;
     }
-    sw_free_entries(ents, n);
-    ents = NULL;
-    n = 0;
-    malloc_zone_pressure_relief(NULL, 0);
+    sw_drop_entries(&ents, &n);
 }
 
 static void tick(void) {

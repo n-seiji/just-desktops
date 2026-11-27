@@ -15,12 +15,18 @@ typedef struct {
 static glyph_t *glyphs;
 static int nglyphs;
 
-// White glyph for an app icon: the tile behind the symbol disappears (see glyph_cut).
-static CGImageRef glyph_mask(CGImageRef icon) {
+// The empty context a mask is drawn into, or NULL.
+static CGContextRef mask_context(void) {
     CGColorSpaceRef cs = CGColorSpaceCreateDeviceRGB();
     CGContextRef c = CGBitmapContextCreate(NULL, GLYPH_PX, GLYPH_PX, 8, GLYPH_PX * 4, cs,
                                            (CGBitmapInfo)kCGImageAlphaPremultipliedLast);
     CGColorSpaceRelease(cs);
+    return c;
+}
+
+// White glyph for an app icon: the tile behind the symbol disappears (see glyph_cut).
+static CGImageRef glyph_mask(CGImageRef icon) {
+    CGContextRef c = mask_context();
     if (!c) return NULL;
     CGContextDrawImage(c, CGRectMake(0, 0, GLYPH_PX, GLYPH_PX), icon);
     glyph_cut(CGBitmapContextGetData(c));
@@ -103,10 +109,7 @@ static const struct {
 static CGImageRef drawn_mask(NSString *bundle) {
     for (size_t i = 0; i < sizeof art / sizeof *art; i++) {
         if (![bundle isEqualToString:@(art[i].bundle)]) continue;
-        CGColorSpaceRef cs = CGColorSpaceCreateDeviceRGB();
-        CGContextRef c = CGBitmapContextCreate(NULL, GLYPH_PX, GLYPH_PX, 8, GLYPH_PX * 4, cs,
-                                               (CGBitmapInfo)kCGImageAlphaPremultipliedLast);
-        CGColorSpaceRelease(cs);
+        CGContextRef c = mask_context();
         if (!c) return NULL;
         art[i].draw(c);
         CGImageRef m = CGBitmapContextCreateImage(c);

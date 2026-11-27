@@ -1,7 +1,9 @@
 #include "swkit.h"
 #include "appearance.h"
 #include "skylight.h"
+#include <malloc/malloc.h>
 #include <math.h>
+#include <stdio.h>
 #include <stdlib.h>
 
 static const palette_t DARK = {0x141416, 0.85, 1, 0.35, 0.18, 0x9a9a9e, 0xffffff, 0xffffff, 0.10};
@@ -189,4 +191,17 @@ void sw_free_entries(sw_entry_t *ents, int n) {
         if (ents[i].title) CFRelease(ents[i].title);
     }
     free(ents);
+}
+
+void sw_drop_entries(sw_entry_t **ents, int *n) {
+    sw_free_entries(*ents, *n);
+    *ents = NULL;
+    *n = 0;
+    malloc_zone_pressure_relief(NULL, 0);
+}
+
+CFStringRef sw_desktop_title(int ws) {
+    char buf[32];
+    snprintf(buf, sizeof buf, "Desktop %d", ws);
+    return CFStringCreateWithCString(NULL, buf, kCFStringEncodingUTF8);
 }

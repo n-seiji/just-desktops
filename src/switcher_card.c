@@ -8,7 +8,6 @@
 #include "thumb.h"
 #include "wm.h"
 #include <dispatch/dispatch.h>
-#include <malloc/malloc.h>
 #include <math.h>
 #include <stdio.h>
 
@@ -101,9 +100,7 @@ static void draw_stage(void) {
     sw_begin(stage_ctx, sz);
     sw_fill_rrect(stage_ctx, (CGRect){{0, 0}, sz}, STAGE_R, pal.tint, pal.tint_a);
     sw_edge_rrect(stage_ctx, (CGRect){{0, 0}, sz}, STAGE_R, &pal);
-    char buf[32];
-    snprintf(buf, sizeof buf, "Desktop %d", wm_current());
-    CFStringRef s = CFStringCreateWithCString(NULL, buf, kCFStringEncodingUTF8);
+    CFStringRef s = sw_desktop_title(wm_current());
     sw_put(stage_ctx, sw_fit(font, s, dim_text(), STAGE_W / 2, kCTLineTruncationEnd), INSET, HEADER_CY);
     CFRelease(s);
     sw_finish(stage_ctx);
@@ -232,10 +229,7 @@ static void close_cards(void) {
     sw_close_window(cid, &dots, &dots_ctx);
     if (font) CFRelease(font);
     font = NULL;
-    sw_free_entries(ents, n);
-    ents = NULL;
-    n = 0;
-    malloc_zone_pressure_relief(NULL, 0);
+    sw_drop_entries(&ents, &n);
 }
 
 static void tick(void) {
