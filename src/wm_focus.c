@@ -173,6 +173,8 @@ void wm_log_recover(const win_t *w) {
     os_log(ws_log(), "wid=%u app=%{public}s found parked by a previous run", w->wid, app);
 }
 
+void wm_log_rescan(int n) { os_log(ws_log(), "reason=rescan trigger=unlock n=%d", n); }
+
 // A parked window that was focused: the desktop it belongs to is unchanged, cur goes from cur_ws to `to`
 // (a refocus stays on cur_ws and prints it once).
 static void log_focus(const win_t *w, const char *reason, int to) {
