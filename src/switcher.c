@@ -239,15 +239,8 @@ static dispatch_source_t delay;
 static bool waiting, visible;
 static int first_dir, extra;
 
-static void stop_delay(void) {
-    if (!delay) return;
-    dispatch_source_cancel(delay);
-    dispatch_release(delay);
-    delay = NULL;
-}
-
 static void show(void) {
-    stop_delay();
+    sw_timer_stop(&delay);
     waiting = false;
     visible = true;
     panel_step(first_dir);
@@ -312,7 +305,7 @@ void switcher_commit(void) {
         panel_commit();
         return;
     }
-    stop_delay();
+    sw_timer_stop(&delay);
     waiting = false;
     uint32_t *ids = NULL;
     int start, count = wm_window_ids(first_dir, &ids, &start);
@@ -325,7 +318,7 @@ void switcher_cancel(void) {
         instant_end();
         return;
     }
-    stop_delay();
+    sw_timer_stop(&delay);
     waiting = visible = false;
     panel_cancel();
 }

@@ -37,7 +37,6 @@ void sw_color(CGContextRef c, uint32_t rgb, CGFloat a, bool stroke) {
     else CGContextSetRGBFillColor(c, r, g, b, a);
 }
 
-// One line of text, cut with an ellipsis to maxw (at the end, or at the start for paths).
 CTLineRef sw_fit(CTFontRef font, CFStringRef s, uint32_t rgb, CGFloat maxw, CTLineTruncationType how) {
     CGColorRef col = CGColorCreateSRGB((rgb >> 16 & 255) / 255.0, (rgb >> 8 & 255) / 255.0, (rgb & 255) / 255.0, 1);
     CFStringRef keys[] = {kCTFontAttributeName, kCTForegroundColorAttributeName};
@@ -63,7 +62,6 @@ CTLineRef sw_fit(CTFontRef font, CFStringRef s, uint32_t rgb, CGFloat maxw, CTLi
     return line;
 }
 
-// Draws l with its x-height-ish middle on cy, then releases it. The context is y-down.
 void sw_put(CGContextRef c, CTLineRef l, CGFloat x, CGFloat cy) {
     CGFloat asc, desc;
     CTLineGetTypographicBounds(l, &asc, &desc, NULL);

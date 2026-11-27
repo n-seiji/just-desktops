@@ -209,16 +209,12 @@ static void request_thumb(int ci) {
     });
 }
 
-static void set_alpha(card_t *k, double a) {
-    SLSSetWindowAlpha(cid, k->wid, (float)a);
-}
-
 // Moves card k to p slots from the centre and applies the pose.
 static void place(card_t *k, double p) {
     cardmath_pose_t q = cardmath_pose(p, SQUARE_DX, SQUARE_FADE);
     CGPoint o = {so.x + CARD_X + q.x, so.y + CARD_Y};
     SLSMoveWindow(cid, k->wid, &o);
-    set_alpha(k, q.a);
+    SLSSetWindowAlpha(cid, k->wid, (float)q.a);
 }
 
 static void release_card(card_t *k) {
@@ -267,7 +263,7 @@ static card_t *new_card(long v) {
                 release_card(k);
                 return NULL;
             }
-            set_alpha(k, 0);
+            SLSSetWindowAlpha(cid, k->wid, 0);
         }
         k->shot = false;
         k->used = true;
@@ -291,7 +287,7 @@ static void settle(bool animate) {
         for (int j = 0; j < m && k->used && !keep; j++) keep = need[j] == k->v;
         if (k->used && !keep) {
             k->used = false;
-            if (k->wid) set_alpha(k, 0);
+            if (k->wid) SLSSetWindowAlpha(cid, k->wid, 0);
         }
     }
     for (int j = 0; j < m; j++) {

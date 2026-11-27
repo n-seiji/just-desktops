@@ -8,7 +8,7 @@
 // Hotkeys, with ⌥ standing for the base modifier (`modifier` in config: opt, cmd or ctrl; default opt):
 //   ⌥<key>   switch to the desktop bound to the key (`keys` in config, default 1 2 3 q w e)
 //   ⌥⇧<key>  move focused window to that desktop
-//   ⌥[ / ⌥]  back / forward through the last 10 focused windows, across desktops
+//   ⌥[ / ⌥]  back / forward through the last HIST_MAX focused windows, across desktops
 //   ⌥Tab / ⌥⇧Tab  open the window switcher / move the selection; releasing ⌥ commits, Esc cancels
 //                 (`switcher = off`: no panel, each Tab focuses the next window at once). ⌥<key> while it is open closes it first.
 // Only the base modifier (plus Shift) may be down; any other extra modifier lets the key through.

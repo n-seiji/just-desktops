@@ -196,10 +196,6 @@ static void log_reshow(const win_t *w, CGPoint want, CGPoint got) {
            (int)want.x, (int)want.y, (int)got.x, (int)got.y, shown_is_parked(got, wm_park_display()));
 }
 
-static void log_repark(int n) {
-    os_log(ws_log(), "reason=repark n=%d", n);
-}
-
 void wm_set_trigger(const char *what) { trigger = what; }
 
 static void log_hide(pid_t pid) {
@@ -307,7 +303,8 @@ static bool cur_window_left(void) {
     return cur_left(tracked_here, tracked_here && l->minimized, alive, read, minimized);
 }
 
-// A check queued earlier is never cancelled by wm_move_focused or wm_focus_wid, which leave follow_gen alone.
+// A check queued earlier is not cancelled by wm_focus_wid, which leaves follow_gen alone, nor by wm_move_focused
+// unless it moves the window to the desktop shown now.
 // It is safe because follow_check_now re-reads the focused window and the quiet period when it runs.
 // user_call: the call came from input during the quiet period (see on_focus): the quiet period does not hold it back.
 static void follow_check_now(uint32_t wid, const char *why, bool user_call) {
@@ -537,6 +534,12 @@ void wm_switch(int ws) {
     }
 }
 
+// The app of window i did not answer: its later windows are skipped, or each would wait out its own timeout.
+static void skip_rest_of_app(bool *hung, int i) {
+    for (int j = i + 1; j < nwins; j++)
+        if (wins[j].pid == wins[i].pid) hung[j] = true;
+}
+
 // The displays changed, so the park corner may have moved: parked windows go to the new one. Their
 // places to return to are kept.
 // It also runs when nothing moved (a wake, another display's resolution), so a window still in the corner is
@@ -553,12 +556,10 @@ void wm_displays_changed(void) {
         if (ax_value(w->el, kAXPositionAttribute, kAXValueTypeCGPoint, &p) && shown_is_parked(p, d)) continue;
         AXError err = move(w, shown_park_point(d));
         if (err == kAXErrorSuccess) n++;
-        if (err == kAXErrorCannotComplete && hung)
-            for (int j = i + 1; j < nwins; j++)
-                if (wins[j].pid == w->pid) hung[j] = true;
+        if (err == kAXErrorCannotComplete && hung) skip_rest_of_app(hung, i);
     }
     free(hung);
-    if (n) log_repark(n);
+    if (n) os_log(ws_log(), "reason=repark n=%d", n);
 }
 
 void wm_dismiss_every(void) {
@@ -666,9 +667,7 @@ void wm_restore_all(void) {
         app_t *a = wm_find_app(w->pid);
         if (a) AXUIElementSetMessagingTimeout(a->el, RESTORE_AX_S);
         AXUIElementSetMessagingTimeout(w->el, RESTORE_AX_S);
-        if (show(w) == kAXErrorCannotComplete && hung)
-            for (int j = i + 1; j < nwins; j++)
-                if (wins[j].pid == w->pid) hung[j] = true;
+        if (show(w) == kAXErrorCannotComplete && hung) skip_rest_of_app(hung, i);
     }
     free(hung);
 }
