@@ -81,11 +81,15 @@ void border_init(void) {
     mach_port_t port;
     if (SLSGetEventPort(cid, &port) == kCGErrorSuccess) {
         CFMachPortRef cf_port = CFMachPortCreateWithPort(NULL, port, drain_events, NULL, false);
-        _CFMachPortSetOptions(cf_port, 0x40);
-        CFRunLoopSourceRef src = CFMachPortCreateRunLoopSource(NULL, cf_port, 0);
-        CFRunLoopAddSource(CFRunLoopGetMain(), src, kCFRunLoopDefaultMode);
-        CFRelease(src);
-        CFRelease(cf_port);
+        if (cf_port) {
+            _CFMachPortSetOptions(cf_port, 0x40);
+            CFRunLoopSourceRef src = CFMachPortCreateRunLoopSource(NULL, cf_port, 0);
+            if (src) {
+                CFRunLoopAddSource(CFRunLoopGetMain(), src, kCFRunLoopDefaultMode);
+                CFRelease(src);
+            }
+            CFRelease(cf_port);
+        }
     }
     for (int e = 0; e < EDGE_COUNT; e++) {
         CGRect r = {{0, 0}, {1, 1}};
@@ -102,7 +106,8 @@ void border_init(void) {
         SLSSetWindowResolution(cid, wid, 2.0);
         SLSSetWindowOpacity(cid, wid, false);
         edges[e].ctx = SLWindowContextCreate(cid, wid, NULL);
-        if (edges[e].ctx) CGContextSetInterpolationQuality(edges[e].ctx, kCGInterpolationNone);
+        if (!edges[e].ctx) return;
+        CGContextSetInterpolationQuality(edges[e].ctx, kCGInterpolationNone);
     }
 }
 
@@ -195,7 +200,7 @@ static void recheck_radius(uint32_t wid, unsigned gen, int left) {
 }
 
 void border_show(CGRect frame, uint32_t target_wid) {
-    if (!edges[EDGE_COUNT - 1].ctx) return;
+    if (!edges[EDGE_COUNT - 1].ctx) return; // init stops at its first failure and builds this one last
     CGRect outer = CGRectInset(frame, -RING_OUTSET, -RING_OUTSET);
     CGRect clip = CGRectInfinite; // only the edge windows are cut to the display; the ring is laid out in full
     CGDirectDisplayID d;
