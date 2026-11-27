@@ -340,12 +340,15 @@ static void follow_check_now(uint32_t wid, const char *why, bool user_call) {
     }
 }
 
-// A window picked in Mission Control is a call with no doubt about it, and Mission Control is zooming back out
-// to the old desktop: the switch goes at once, so that the zoom lands on the new one.
+static double last_click_ago(void);
+
+// A window clicked in Mission Control is a call with no doubt about it, and Mission Control is zooming back out
+// to the old desktop: the switch goes at once, so that the zoom lands on the new one. Without a click just
+// before, the focus may be macOS's doing (an app quit or closed a window while Mission Control was up): it waits.
 static void follow_later(uint32_t wid, bool user_call) {
     unsigned gen = ++follow_gen;
     const char *why = trigger;
-    if (wm_mission_control_up()) {
+    if (last_click_ago() < CALL_INPUT_S && wm_mission_control_up()) {
         follow_check_now(wid, why, user_call);
         return;
     }
@@ -500,7 +503,9 @@ void wm_switch(int ws) {
     cur_ws = ws;
     stale = f && f->ws == old ? f->wid : 0;
     unsigned gen = ++hold_gen;
-    bool began = !holding && !wm_mission_control_up() && SLSDisableUpdate(SLSMainConnectionID()) == kCGErrorSuccess;
+    bool zooming = wm_mission_control_up();
+    if (zooming) release_screen(); // a hold left by a switch just before would be let go in the middle of the zoom
+    bool began = !zooming && !holding && SLSDisableUpdate(SLSMainConnectionID()) == kCGErrorSuccess;
     if (began) {
         holding = true;
         held_since = CFAbsoluteTimeGetCurrent();
