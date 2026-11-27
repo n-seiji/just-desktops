@@ -41,7 +41,10 @@ static int windows(bool only_mc) {
         CGRect r = CGRectZero;
         CFNumberGetValue(CFDictionaryGetValue(d, kCGWindowLayer), kCFNumberIntType, &layer);
         CGRectMakeWithDictionaryRepresentation(CFDictionaryGetValue(d, kCGWindowBounds), &r);
-        if (layer == 19 && !strcmp(owner, "WindowManager")) mc = 1;
+        // The same test as wm_mission_control_up in src/wm_list.c: keep the two alike.
+        CGSize full = CGDisplayBounds(CGMainDisplayID()).size;
+        if (layer == 19 && !strcmp(owner, "WindowManager") && r.size.width >= full.width && r.size.height >= full.height)
+            mc = 1;
         if (!only_mc && layer != 0)
             printf("%s|%d|%gx%g+%g+%g|%s\n", owner, layer, r.size.width, r.size.height, r.origin.x, r.origin.y, name);
     }
