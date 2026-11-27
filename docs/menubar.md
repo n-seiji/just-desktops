@@ -54,6 +54,6 @@ Click `+k` to open a small panel under it. The panel lists the hidden windows in
 
 ## Memory
 
-AppKit's status item costs about 5MB: idle is about 13.6MB with the strip and 12.6MB with `icon`. With `menubar = off` (command line only) none of it is loaded and idle stays about 8MB.
+AppKit's status item costs about 5MB. Idle is about 12.6MB with `icon`. The idle figures for the strip and for `menubar = off` (command line only, where none of it is loaded) are in the [README](../README.md#memory).
 
 The panel is created on click and freed on close. Opening it once costs about 3MB of resident memory that stays after it closes (window and text machinery loaded on first use). Repeated opens do not add more.

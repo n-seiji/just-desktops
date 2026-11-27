@@ -1,18 +1,20 @@
 # ~/.config/just-desktops/config
+# Every setting below is commented out, so copying this file changes nothing. Remove the leading # of a line to set it; restart to apply.
 # One `key = value` per line. # starts a comment, anywhere on a line. Values are case-insensitive. The last line for a key wins.
 # An unknown value, setting or line is ignored with a warning on stderr (the log file for the LaunchAgent); the setting keeps its earlier or default value.
 
 # Base modifier of every hotkey (written ⌥ in this file): opt (default) | cmd | ctrl. option, alt, command and control also work.
 # Command and Control take over cmd-Tab / cmd-digit and ctrl-Tab / ctrl-digit system wide while just-desktops runs.
-modifier = opt
+# modifier = opt
 
 # Draw the border around the focused window (on|off)
-border = on
+# border = on
 
 # ⌥Tab window switcher: list | square | off (on means list). off draws no panel: each Tab focuses the next window at once.
 # square shows a screenshot of each window and asks for Screen Recording permission at launch; until it is
-# granted it shows the app icon. The panel appears after ⌥ has been held about 150ms; a quick tap never draws it. After a rebuild macOS asks again (the grant follows the binary's code hash).
-switcher = list
+# granted it shows the app icon. The panel appears after ⌥ has been held about 150ms; a quick tap never draws it.
+# An ad-hoc signed build (one you built yourself) is asked again after every rebuild, because its grant follows the code hash. A release signed with a Developer ID keeps the grant.
+# switcher = list
 
 # Apps whose windows the square switcher never screenshots (they show the app icon instead). Password managers
 # are built in (1Password, Bitwarden, KeePassXC, Apple Passwords, Keychain Access and others); other apps (for example RoboForm or Secrets)
@@ -21,19 +23,19 @@ switcher = list
 
 # Menu bar item: on (or strip) = the current desktop's key and a glyph per window, icon = only a small app icon,
 # off = none. Costs about 5MB of memory when on or icon. The app always shows an item (default on; off means icon).
-menubar = off
+# menubar = on
 
 # Keys that switch desktops with ⌥ (and move the focused window with ⌥⇧).
 # The n-th key is Desktop n. Digits and letters, at most 10. Default: 1 2 3 q w e
-keys = 1 2 3 q w e
+# keys = 1 2 3 q w e
 
 # Pin apps to a desktop: <bundle id> = <desktop number, 1-10>
 # A pin places a window on that desktop when it first appears (an existing window at launch, or one opened in the background); that does not switch to it.
 # A window that is focused when it appears, or focused later, switches to its desktop: opening a link in a pinned Safari takes you to its pin.
 # Find a bundle id with: osascript -e 'id of app "Safari"'
-com.apple.Safari = 1
-com.googlecode.iterm2 = 2
-com.tinyspeck.slackmacgap = 3
+# com.apple.Safari = 1
+# com.googlecode.iterm2 = 2
+# com.tinyspeck.slackmacgap = 3
 
 # Keep an app on every desktop, hidden (Cmd-H) when you switch desktops: <bundle id> = none
 # For apps you call up with a shortcut, such as a quick terminal or a password manager.
