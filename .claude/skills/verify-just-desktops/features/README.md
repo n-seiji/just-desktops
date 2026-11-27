@@ -19,6 +19,13 @@ Each one names how a user reaches the feature, how to drive it, and what proves 
   - Thumbnails move between runs, so take the point from a fresh frame. A click on a window of the current desktop logs nothing.
   - Mission Control is recognised by WindowManager's display-sized layer 19 window, seen on macOS 27.2.1 only.
 
+## Switch desktops with the hotkey while Mission Control is open
+
+- **Reach.** Open Mission Control, then hold `⌥` and press a desktop key.
+- **Drive.** `open -a "Mission Control"`, wait 1 s, `jd-drive key 19`.
+- **Proof.** No torn frame in the recording, and after Mission Control closes the other desktop's windows are on screen. Mission Control keeps showing the thumbnails it opened with.
+- **Gotchas.** `jd-drive mc` is also 1 in App Exposé (`open -a "Mission Control" --args 2`), which uses the same shield window, and 0 in Show Desktop (`--args 1`).
+
 ## Not driven yet
 
 The `⌥Tab` switchers, `⌥[` and `⌥]`, moving a window with `⌥⇧` + key, the menu bar strip, and quit and restart. Add a section here when you drive one.
