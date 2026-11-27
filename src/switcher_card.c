@@ -8,7 +8,6 @@
 #include "thumb.h"
 #include "wm.h"
 #include <dispatch/dispatch.h>
-#include <malloc/malloc.h>
 #include <math.h>
 #include <stdio.h>
 
@@ -101,9 +100,7 @@ static void draw_stage(void) {
     sw_begin(stage_ctx, sz);
     sw_fill_rrect(stage_ctx, (CGRect){{0, 0}, sz}, STAGE_R, pal.tint, pal.tint_a);
     sw_edge_rrect(stage_ctx, (CGRect){{0, 0}, sz}, STAGE_R, &pal);
-    char buf[32];
-    snprintf(buf, sizeof buf, "Desktop %d", wm_current());
-    CFStringRef s = CFStringCreateWithCString(NULL, buf, kCFStringEncodingUTF8);
+    CFStringRef s = sw_desktop_title(wm_current());
     sw_put(stage_ctx, sw_fit(font, s, dim_text(), STAGE_W / 2, kCTLineTruncationEnd), INSET, HEADER_CY);
     CFRelease(s);
     sw_finish(stage_ctx);
@@ -209,16 +206,12 @@ static void request_thumb(int ci) {
     });
 }
 
-static void set_alpha(card_t *k, double a) {
-    SLSSetWindowAlpha(cid, k->wid, (float)a);
-}
-
 // Moves card k to p slots from the centre and applies the pose.
 static void place(card_t *k, double p) {
     cardmath_pose_t q = cardmath_pose(p, SQUARE_DX, SQUARE_FADE);
     CGPoint o = {so.x + CARD_X + q.x, so.y + CARD_Y};
     SLSMoveWindow(cid, k->wid, &o);
-    set_alpha(k, q.a);
+    SLSSetWindowAlpha(cid, k->wid, (float)q.a);
 }
 
 static void release_card(card_t *k) {
@@ -236,10 +229,7 @@ static void close_cards(void) {
     sw_close_window(cid, &dots, &dots_ctx);
     if (font) CFRelease(font);
     font = NULL;
-    sw_free_entries(ents, n);
-    ents = NULL;
-    n = 0;
-    malloc_zone_pressure_relief(NULL, 0);
+    sw_drop_entries(&ents, &n);
 }
 
 static void tick(void) {
@@ -267,7 +257,7 @@ static card_t *new_card(long v) {
                 release_card(k);
                 return NULL;
             }
-            set_alpha(k, 0);
+            SLSSetWindowAlpha(cid, k->wid, 0);
         }
         k->shot = false;
         k->used = true;
@@ -291,7 +281,7 @@ static void settle(bool animate) {
         for (int j = 0; j < m && k->used && !keep; j++) keep = need[j] == k->v;
         if (k->used && !keep) {
             k->used = false;
-            if (k->wid) set_alpha(k, 0);
+            if (k->wid) SLSSetWindowAlpha(cid, k->wid, 0);
         }
     }
     for (int j = 0; j < m; j++) {

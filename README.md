@@ -26,6 +26,7 @@ Keyboard-driven desktops for macOS, in one small background process (about 8MB).
       <b>Apps on every desktop</b><br>
       <sub>Choose apps that belong to every desktop and hide when you switch, such as a terminal or a password manager.</sub>
     </td>
+  </tr>
 </table>
 
 Three ways to see the windows on this desktop:
@@ -52,7 +53,7 @@ Three ways to see the windows on this desktop:
 
 - **Desktops.** Press `⌥1`, `⌥2`, `⌥3`... to switch between up to 10 desktops. Add Shift to take the focused window with you. macOS Spaces and SIP are left alone.
 - **Window switcher.** Hold `⌥` and press Tab to pick a window on this desktop. Shown as a list, a big preview, or not at all.
-- **Menu bar.** Optional. One icon per window on this desktop, and the desktop number.
+- **Menu bar.** Optional. One icon per window on this desktop, and the desktop key.
 
 <img src="assets/tile-border.svg" width="96" align="right" alt="A ring around the focused window">
 
@@ -89,6 +90,8 @@ mise use -g github:n-seiji/just-desktops
 just-desktops
 ```
 
+`just-desktops --version` (or `-v`) prints the version.
+
 macOS asks for Accessibility. Grant it to `just-desktops` itself, not to your terminal: a terminal with Accessibility lets every program started in it drive your apps. Run it through `mise run service` (below) so that only the binary holds the grant. On exit, every parked window is moved back.
 
 To start at login, run this inside the repository:
@@ -100,7 +103,7 @@ mise run unservice   # stop and unregister it
 
 Upgrading through mise changes the binary path. Run `mise run service` again and re-grant Accessibility.
 
-The service writes its log to `~/Library/Logs/just-desktops.log` (earlier versions used `/tmp/just-desktops.log`; `mise run service` rewrites the plist, and the old file can be deleted).
+The service writes its log to `~/Library/Logs/just-desktops.log`.
 
 Use either the app or the command line service, not both: the second one exits at once.
 
@@ -164,7 +167,7 @@ It mixes two tools: [AeroSpace](https://github.com/nikitabobko/AeroSpace) (windo
 
 ## Memory
 
-Measured with `footprint`.
+Measured with `footprint`. The peaks are measured while `⌥` is held, with screenshots.
 
 | State | Memory |
 |---|---|
@@ -173,7 +176,7 @@ Measured with `footprint`.
 | `list` open | peak about 16MB |
 | `square` open | peak about 25MB |
 
-The switcher memory is released when you let go of `⌥`. More in [switcher](docs/switcher.md#memory) and [menu bar](docs/menubar.md#memory).
+More in [switcher](docs/switcher.md#memory) and [menu bar](docs/menubar.md#memory).
 
 ## Development
 
@@ -181,9 +184,9 @@ Needs the Xcode Command Line Tools and [mise](https://mise.jdx.dev). Use `mise r
 
 ## Limitations
 
-- Windows are parked at the bottom-right corner of the display furthest to the right (the lowest of those), which no other display touches. Desktops are shared by all displays: there is one set of desktops, not one per display. Parked windows move to that display, so with "Displays have separate Spaces" on they join its Space. Multiple displays are lightly tested.
+- Multiple displays are lightly tested. Where windows are parked and how displays share desktops: [Workspaces](docs/workspaces.md#desktops-and-keys).
 - SkyLight is a private Apple API, so a macOS update can break the border.
-- After a crash, parked windows stay in the bottom-right corner until the next launch moves them back.
+- After a crash, parked windows stay in the bottom-right corner until the next launch moves them back ([Workspaces](docs/workspaces.md#desktops-and-keys)).
 - Only the desktop keys and the base modifier are configurable.
 
 ## License

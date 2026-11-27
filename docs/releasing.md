@@ -29,7 +29,7 @@ The certificate carries your legal name, and it is shown in the Gatekeeper dialo
 scripts/setup-release-env.sh
 ```
 
-Run it first, and again after the change that moved the release trigger to `main` merges. It creates two environments, both deployable from the `main` branch only (it replaces the old `v*` tag policy):
+Run it first. It creates two environments, both deployable from the `main` branch only (it removes any other branch policy):
 
 - `signing` holds the signing and notarization secrets for the `build` job. It has no reviewers.
 - `release` gates the `publish` job, with you as the required reviewer.
@@ -61,21 +61,7 @@ The release fails before building unless all five are set.
 
 Use a dedicated App Store Connect API key, with the Developer role, for this repository (step 2), not one shared with other repositories.
 
-### 5. Delete the old repository secrets
-
-If the five secrets were ever set at repository scope, delete the repository-level ones right after the five `signing` environment secrets are set. Do not wait for a release.
-
-Jobs that run in an environment can also read repository-level secrets. So while those secrets exist, the environment restriction (deployable from `main` only) protects nothing: any workflow can still read them.
-
-```sh
-gh secret list                  # repository-level secrets: none of the five should remain
-gh secret list --env signing    # the five environment secrets
-gh secret delete DEVELOPER_ID_P12_BASE64
-gh secret delete DEVELOPER_ID_P12_PASSWORD
-gh secret delete ASC_KEY_ID
-gh secret delete ASC_ISSUER_ID
-gh secret delete ASC_KEY_P8_BASE64
-```
+Do not also set the five secrets at repository scope. A job that runs in an environment can read repository-level secrets too, so they would bypass the `main`-only restriction. `gh secret list` shows the repository-level ones, and none of the five should be there.
 
 ## Cutting a release
 

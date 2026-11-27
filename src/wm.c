@@ -181,6 +181,15 @@ win_t *wm_focused(void) {
 
 // ---- apps ----
 
+// Tracks the app's windows; track returns at once for one it already has.
+static void track_windows(app_t *a) {
+    CFArrayRef list = NULL;
+    if (AXUIElementCopyAttributeValue(a->el, kAXWindowsAttribute, (CFTypeRef *)&list) == kAXErrorSuccess && list) {
+        for (CFIndex i = 0; i < CFArrayGetCount(list); i++) track(a, CFArrayGetValueAtIndex(list, i));
+        CFRelease(list);
+    }
+}
+
 static void add_app(pid_t pid, int assign, bool nopreview, int attempt) {
     if (wm_find_app(pid)) return;
     AXObserverRef obs = NULL;
@@ -217,12 +226,7 @@ static void add_app(pid_t pid, int assign, bool nopreview, int attempt) {
     }
     apps[napps++] = (app_t){pid, el, obs, assign, nopreview};
 
-    CFArrayRef list = NULL;
-    if (AXUIElementCopyAttributeValue(el, kAXWindowsAttribute, (CFTypeRef *)&list) == kAXErrorSuccess && list) {
-        for (CFIndex i = 0; i < CFArrayGetCount(list); i++)
-            track(wm_find_app(pid), CFArrayGetValueAtIndex(list, i));
-        CFRelease(list);
-    }
+    track_windows(&apps[napps - 1]);
     if (attempt > 0) {
         wm_set_trigger("retry");
         wm_on_focus();
@@ -230,8 +234,21 @@ static void add_app(pid_t pid, int assign, bool nopreview, int attempt) {
 }
 
 void wm_add_app(pid_t pid, const char *bundle_id) {
+    if (wm_find_app(pid)) return; // apps_rescan offers every running app, and each redraw costs a focus query
     add_app(pid, config_assign(bundle_id), config_no_preview(bundle_id), 0);
     if (menubar_ready()) wm_refresh_menubar(wm_focused());
+}
+
+// Under a lock the log shows no window tracked until its app was activated, so the first look at start can
+// have found none. Called when the screen unlocks, once the apps that failed to register are added.
+void wm_rescan(void) {
+    wm_set_trigger("unlock");
+    int before = nwins;
+    for (int i = 0; i < napps; i++) track_windows(&apps[i]);
+    wm_log_rescan(nwins - before);
+    if (menubar_ready()) wm_refresh_menubar(wm_focused());
+    wm_settle(); // as at start: a parked window the scan finds focused is not a call for its desktop
+    wm_on_focus();
 }
 
 void wm_remove_app(pid_t pid) {

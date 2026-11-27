@@ -52,6 +52,31 @@ static CFArrayRef shown_windows(void) {
                                       kCGNullWindowID);
 }
 
+// Mission Control is up, or still zooming back out. WindowManager keeps a shield window over the display at
+// this level the whole time (seen on macOS 27; a macOS that draws Mission Control some other way reads as
+// not up, and a switch goes as it does anywhere else). The owner name needs no Screen Recording permission.
+#define MISSION_CONTROL_LAYER 19
+bool wm_mission_control_up(void) {
+    CFArrayRef shown = shown_windows();
+    if (!shown) return false;
+    CGSize full = CGDisplayBounds(CGMainDisplayID()).size;
+    bool up = false;
+    for (CFIndex i = 0; i < CFArrayGetCount(shown) && !up; i++) {
+        CFDictionaryRef d = CFArrayGetValueAtIndex(shown, i);
+        CFStringRef owner = CFDictionaryGetValue(d, kCGWindowOwnerName);
+        CFNumberRef n = CFDictionaryGetValue(d, kCGWindowLayer);
+        CFDictionaryRef b = CFDictionaryGetValue(d, kCGWindowBounds);
+        int layer = 0;
+        CGRect r = CGRectZero;
+        // The level alone is not Mission Control's own: a smaller WindowManager window there is something else.
+        up = owner && n && b && CFNumberGetValue(n, kCFNumberIntType, &layer) && layer == MISSION_CONTROL_LAYER &&
+             CFEqual(owner, CFSTR("WindowManager")) && CGRectMakeWithDictionaryRepresentation(b, &r) &&
+             r.size.width >= full.width && r.size.height >= full.height;
+    }
+    CFRelease(shown);
+    return up;
+}
+
 typedef struct { CGRect r[8]; uint32_t n; } displays_t;
 
 // Read once per list build, not per window.
@@ -193,6 +218,7 @@ static int ordered_windows(int dir, pid_t **pids, uint32_t **wids, int *sel) {
 // Every switchable window, in the menu bar's order (grouped by app), so Tab walks the strip left
 // to right.
 int wm_windows(int dir, sw_entry_t **out, int *sel) {
+    *out = NULL;
     pid_t *pids;
     uint32_t *wids;
     int n = ordered_windows(dir, &pids, &wids, sel);

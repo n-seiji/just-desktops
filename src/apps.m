@@ -10,6 +10,32 @@ static void add(NSRunningApplication *app) {
     wm_add_app(app.processIdentifier, app.bundleIdentifier.UTF8String);
 }
 
+static void add_running(void) {
+    for (NSRunningApplication *app in NSWorkspace.sharedWorkspace.runningApplications) add(app);
+}
+
+// A start under a lock tracked no window, so once the screen unlocks every app is looked at again: the ones
+// that did not register, then the windows of all of them.
+static void apps_rescan(void) {
+    @autoreleasepool {
+        wm_set_trigger("unlock"); // the windows tracked while apps are added log it too
+        add_running();
+        wm_rescan();
+    }
+}
+
+// The main queue, like every other event. Registered with DeliverImmediately: the other suspension behaviours
+// drop or hold a notification while the app is not the active one, and this one never is.
+static void screen_unlocked(CFNotificationCenterRef center, void *observer, CFNotificationName name, const void *object,
+                            CFDictionaryRef info) {
+    (void)center;
+    (void)observer;
+    (void)name;
+    (void)object;
+    (void)info;
+    dispatch_async(dispatch_get_main_queue(), ^{ apps_rescan(); });
+}
+
 @interface JDAppObserver : NSObject
 @end
 
@@ -45,7 +71,10 @@ void apps_init(void) {
     [nc addObserver:observer selector:@selector(activated:) name:NSWorkspaceDidActivateApplicationNotification object:nil];
     [nc addObserver:observer selector:@selector(hidden:) name:NSWorkspaceDidHideApplicationNotification object:nil];
     [nc addObserver:observer selector:@selector(hidden:) name:NSWorkspaceDidUnhideApplicationNotification object:nil];
-    for (NSRunningApplication *app in NSWorkspace.sharedWorkspace.runningApplications) add(app);
+    // Posted when the lock screen goes away. CoreFoundation's center, which needs no AppKit class.
+    CFNotificationCenterAddObserver(CFNotificationCenterGetDistributedCenter(), NULL, screen_unlocked,
+                                    CFSTR("com.apple.screenIsUnlocked"), NULL, CFNotificationSuspensionBehaviorDeliverImmediately);
+    add_running();
 }
 
 pid_t apps_frontmost(void) {

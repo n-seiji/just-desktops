@@ -1,5 +1,5 @@
 #pragma once
-// ~/.config/just-desktops/config, read once at start.
+// ~/.config/just-desktops/config, read once at start. config_load starts from the defaults, so the tests, which call it again, read the file alone.
 #include "common.h"
 
 typedef enum { SW_OFF, SW_LIST, SW_SQUARE } sw_style_t;

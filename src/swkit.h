@@ -41,3 +41,7 @@ void sw_timer_stop(dispatch_source_t *t);
 
 // Frees the entries wm_windows or wm_overflow returned.
 void sw_free_entries(sw_entry_t *ents, int n);
+// sw_free_entries on a switcher's own list, which it clears, then gives the freed memory back to the system.
+void sw_drop_entries(sw_entry_t **ents, int *n);
+// The header text of both switchers, "Desktop 3" for ws 3. +1 retained.
+CFStringRef sw_desktop_title(int ws);

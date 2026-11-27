@@ -8,21 +8,15 @@
 // Hotkeys, with ⌥ standing for the base modifier (`modifier` in config: opt, cmd or ctrl; default opt):
 //   ⌥<key>   switch to the desktop bound to the key (`keys` in config, default 1 2 3 q w e)
 //   ⌥⇧<key>  move focused window to that desktop
-//   ⌥[ / ⌥]  back / forward through the last 10 focused windows, across desktops
+//   ⌥[ / ⌥]  back / forward through the last HIST_MAX focused windows, across desktops
 //   ⌥Tab / ⌥⇧Tab  open the window switcher / move the selection; releasing ⌥ commits, Esc cancels
 //                 (`switcher = off`: no panel, each Tab focuses the next window at once). ⌥<key> while it is open closes it first.
 // Only the base modifier (plus Shift) may be down; any other extra modifier lets the key through.
 
 #define KEY_TAB 0x30
 #define KEY_ESC 0x35
-#define KEY_RETURN 0x24
-#define KEY_ENTER 0x4C
 #define KEY_LBRACKET 0x21
 #define KEY_RBRACKET 0x1E
-#define KEY_W 0x0D
-#define KEY_Q 0x0C
-#define KEY_M 0x2E
-#define KEY_H 0x04
 
 static CFMachPortRef tap;
 static CGEventFlags base; // the configured base modifier
@@ -61,15 +55,12 @@ static CGEventRef on_key(CGEventTapProxy proxy, CGEventType type, CGEventRef ev,
     int64_t key = CGEventGetIntegerValueField(ev, kCGKeyboardEventKeycode);
     bool repeat = CGEventGetIntegerValueField(ev, kCGKeyboardEventAutorepeat) != 0;
     CGEventFlags flags = CGEventGetFlags(ev);
-    // Before any early return, so Cmd-Tab and other apps' shortcuts are seen. Typing (no modifier, or only Shift)
-    // and held-down repeats are not calls.
+    // Before any early return, so Cmd-Tab and other apps' shortcuts are seen. Held-down repeats are not calls.
     if (!repeat) {
-        bool shortcut = flags & (kCGEventFlagMaskCommand | kCGEventFlagMaskControl | kCGEventFlagMaskAlternate);
         double now = CFAbsoluteTimeGetCurrent();
-        if (key == KEY_RETURN || key == KEY_ENTER || shortcut) last_call_key = now;
-        // Every key replaces the last, so a ⌘W after a shortcut cancels it. Close, quit, minimize and hide move focus.
-        bool leave = (flags & kCGEventFlagMaskCommand) && (key == KEY_W || key == KEY_Q || key == KEY_M || key == KEY_H);
-        last_quick_key = shortcut && !leave ? now : 0;
+        if (keyrules_is_call_key(key, flags)) last_call_key = now;
+        // Every key replaces the last, so a ⌘W after a shortcut cancels it.
+        last_quick_key = keyrules_is_quick_key(key, flags) ? now : 0;
     }
     if (armed && key == KEY_ESC) {
         cancel();

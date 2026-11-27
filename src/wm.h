@@ -5,6 +5,7 @@
 void wm_init(void);
 void wm_add_app(pid_t pid, const char *bundle_id);
 void wm_remove_app(pid_t pid);
+void wm_rescan(void); // track the windows of every registered app that are not tracked yet: the screen unlocked
 void wm_on_focus(void); // the focused window or app may have changed
 void wm_refresh_ui(void); // redraw the border and menu bar for the focused window
 void wm_set_trigger(const char *what); // what led to the next wm_on_focus, a literal; only for the log

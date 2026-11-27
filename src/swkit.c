@@ -1,7 +1,9 @@
 #include "swkit.h"
 #include "appearance.h"
 #include "skylight.h"
+#include <malloc/malloc.h>
 #include <math.h>
+#include <stdio.h>
 #include <stdlib.h>
 
 static const palette_t DARK = {0x141416, 0.85, 1, 0.35, 0.18, 0x9a9a9e, 0xffffff, 0xffffff, 0.10};
@@ -37,7 +39,6 @@ void sw_color(CGContextRef c, uint32_t rgb, CGFloat a, bool stroke) {
     else CGContextSetRGBFillColor(c, r, g, b, a);
 }
 
-// One line of text, cut with an ellipsis to maxw (at the end, or at the start for paths).
 CTLineRef sw_fit(CTFontRef font, CFStringRef s, uint32_t rgb, CGFloat maxw, CTLineTruncationType how) {
     CGColorRef col = CGColorCreateSRGB((rgb >> 16 & 255) / 255.0, (rgb >> 8 & 255) / 255.0, (rgb & 255) / 255.0, 1);
     CFStringRef keys[] = {kCTFontAttributeName, kCTForegroundColorAttributeName};
@@ -63,7 +64,6 @@ CTLineRef sw_fit(CTFontRef font, CFStringRef s, uint32_t rgb, CGFloat maxw, CTLi
     return line;
 }
 
-// Draws l with its x-height-ish middle on cy, then releases it. The context is y-down.
 void sw_put(CGContextRef c, CTLineRef l, CGFloat x, CGFloat cy) {
     CGFloat asc, desc;
     CTLineGetTypographicBounds(l, &asc, &desc, NULL);
@@ -191,4 +191,17 @@ void sw_free_entries(sw_entry_t *ents, int n) {
         if (ents[i].title) CFRelease(ents[i].title);
     }
     free(ents);
+}
+
+void sw_drop_entries(sw_entry_t **ents, int *n) {
+    sw_free_entries(*ents, *n);
+    *ents = NULL;
+    *n = 0;
+    malloc_zone_pressure_relief(NULL, 0);
+}
+
+CFStringRef sw_desktop_title(int ws) {
+    char buf[32];
+    snprintf(buf, sizeof buf, "Desktop %d", ws);
+    return CFStringCreateWithCString(NULL, buf, kCFStringEncodingUTF8);
 }

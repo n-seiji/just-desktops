@@ -23,6 +23,7 @@ int main(void) {
     eq("strip_width(1)", strip_width(1), 44);
     eq("strip_width(10)", strip_width(10), 11 * 20 + 10 * 4);
 
+    // docs/menubar.md promises both numbers
     eq("STRIP_MIN_SLOTS", STRIP_MIN_SLOTS, 5);
     eq("STRIP_SHRINK_S", STRIP_SHRINK_S, 30);
 

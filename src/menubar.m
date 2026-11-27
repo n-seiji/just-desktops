@@ -95,6 +95,7 @@ static NSImage *icon_image(void) {
 // pixel grid so it stays crisp at 1x and 2x.
 static void draw_centered(CGContextRef c, CGFloat x, CFStringRef text, CGFloat size) {
     CTFontRef font = CTFontCreateUIFontForLanguage(kCTFontUIFontEmphasizedSystem, size, NULL);
+    if (!font) return;
     CFTypeRef keys[] = {kCTFontAttributeName, kCTForegroundColorFromContextAttributeName};
     CFTypeRef vals[] = {font, kCFBooleanTrue};
     CFDictionaryRef attrs = CFDictionaryCreate(NULL, (const void **)keys, (const void **)vals, 2,
