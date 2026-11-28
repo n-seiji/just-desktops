@@ -41,7 +41,7 @@ A journey with a **Seen** line was run, on macOS 27.2 with `switcher = off` and 
 - **Reach.** Hold `⌥`, press Tab, wait, release.
 - **Drive.** `jd-drive chord opt 48 -n 3 -t 400`, with `switcher = list`, then `square`. Poll `jd-drive windows` during the 400 ms, or record 4 s and read the sheet. Then `jd-drive chord opt 48 -n 2 -t 400 -a`, and `jd-drive chord optshift 48 -n 2 -t 400`.
 - **Proof.** A panel of the chosen style is on screen before the release and gone after it. The window after three steps is the one focused. A held Tab repeats only every 120 ms, so the `-a` run steps fewer times than it posted. With `off` there is no panel and each step focuses the next window at once.
-- **Seen.** `jd-drive chord opt 48 -n 2 -t 1200` with `switcher = list`: a screenshot 0.9 s in shows the panel with the second row highlighted. `jd-drive windows` listed no just-desktops window while it was open, so use a screenshot or `windows all`. `square`, `-a` and `optshift` held are not run.
+- **Seen.** `jd-drive chord opt 48 -n 2 -t 1200` with `switcher = list`: a screenshot 0.9 s in shows the panel with the second row highlighted. `jd-drive windows` listed no just-desktops window while it was open, so use a screenshot. Whether `windows all` lists the panel is not checked. `square`, `-a` and `optshift` held are not run.
 - **Gotchas.** `square` shows screenshots only with Screen Recording granted, and the app icon otherwise.
 
 ## Cancel a switcher with Esc
@@ -69,7 +69,7 @@ A journey with a **Seen** line was run, on macOS 27.2 with `switcher = off` and 
 - **Reach.** Press the combinations the tap lets through.
 - **Drive.** `jd-drive probe`, with just-desktops running and the default `modifier` and `keys`.
 - **Proof.** The table is the proof. Record it before and after a change and `diff` the two. With the current tap it should read `cmd-opt-1 pass`, `ctrl-opt-tab pass`, `opt-shift-lbracket pass`, `esc-not-armed pass`, `opt-1-autorepeat swallow`, `opt-shift-1-autorepeat swallow`, `opt-a pass`, `opt-tab swallow`, `opt-shift-tab swallow`, `esc-armed swallow`, `opt-tab-again swallow`, `esc-after-release pass`, `opt-lbracket swallow`, `opt-rbracket swallow`. `esc-after-release` reads `swallow` if releasing `⌥` no longer commits.
-- **Seen.** The ten rows other than `opt-shift-1-autorepeat`, `opt-a`, `opt-tab-again` and `esc-after-release`, the same in three runs. Those four are pinned in `tests/keyrules_test.c` (`keyrules_decide`).
+- **Seen.** All fourteen rows, the same in two runs.
 - **Gotchas.** The table cannot see the call and quick-key timestamps, the Tab repeat throttle, or whether a repeat starts a switch: both ways the key is swallowed. With `switcher = list` or `square` the panel flashes during the held rows.
 - **Gotchas.** A tap that is off (disabled by timeout) cannot be driven, and neither can the missed-release path in it.
 
@@ -105,6 +105,12 @@ A journey with a **Seen** line was run, on macOS 27.2 with `switcher = off` and 
 - **Reach.** Set `<bundle id> = none` for one app, restart, switch desktops.
 - **Drive.** `jd-drive key 19`, then `jd-drive key 18`. Open the app first.
 - **Proof.** One `app=... reason=hide trigger=hotkey cur=N` line for each switch, and the app's windows are hidden (not on screen in `jd-drive windows`'s owner list) on every desktop. Calling it with its own shortcut shows it in place, with no desktop switch.
+
+## Comparing two builds
+
+- **Start from a known focus.** The move and history steps act on the focused window, so a journey that starts with a different window in front gives different lines and proves nothing. After the first desktop key, bring one named app to the front (`open -a <app>`), then drive.
+- **Run each build twice or more, in alternating order.** `trigger` is the last thing seen, and the ring after a move depends on which window macOS focuses next: both differ between two runs of one build. A difference counts only if it follows the build.
+- **Footprint.** `scripts/footprint.sh` needs no other instance running. Alternate the builds, eight runs each, and compare medians: with border and menu bar off, runs of one build spread over about 0.05 MB, and adding unused code alone moves the median by up to 0.03 MB.
 
 ## Not driven automatically
 
