@@ -69,7 +69,7 @@ A journey with a **Seen** line was run, on macOS 27.2 with `switcher = off` and 
 - **Reach.** Press the combinations the tap lets through.
 - **Drive.** `jd-drive probe`, with just-desktops running and the default `modifier` and `keys`.
 - **Proof.** The table is the proof. Record it before and after a change and `diff` the two. With the current tap it should read `cmd-opt-1 pass`, `ctrl-opt-tab pass`, `opt-shift-lbracket pass`, `esc-not-armed pass`, `opt-1-autorepeat swallow`, `opt-shift-1-autorepeat swallow`, `opt-a pass`, `opt-tab swallow`, `opt-shift-tab swallow`, `esc-armed swallow`, `opt-tab-again swallow`, `esc-after-release pass`, `opt-lbracket swallow`, `opt-rbracket swallow`. `esc-after-release` reads `swallow` if releasing `⌥` no longer commits.
-- **Seen.** The ten rows other than `opt-shift-1-autorepeat`, `opt-a`, `opt-tab-again` and `esc-after-release`, the same in three runs. Those four are read from `src/hotkey.c`.
+- **Seen.** The ten rows other than `opt-shift-1-autorepeat`, `opt-a`, `opt-tab-again` and `esc-after-release`, the same in three runs. Those four are pinned in `tests/keyrules_test.c` (`keyrules_decide`).
 - **Gotchas.** The table cannot see the call and quick-key timestamps, the Tab repeat throttle, or whether a repeat starts a switch: both ways the key is swallowed. With `switcher = list` or `square` the panel flashes during the held rows.
 - **Gotchas.** A tap that is off (disabled by timeout) cannot be driven, and neither can the missed-release path in it.
 

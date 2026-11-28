@@ -16,7 +16,7 @@ just-desktops is one process on the main run loop. It emulates desktops by movin
 | `wm_ui.c` | Redraw the focus ring and the menu bar for the focused window. |
 | `wm_list.c` | The window lists the switchers and the menu bar draw from. |
 | `ax.c` | Typed reads of Accessibility attributes. |
-| `hotkey.c` | The keyboard event tap: desktop keys, ⌥[ ⌥], ⌥Tab, Esc. |
+| `hotkey.c` | The keyboard event tap: reads each event, asks `keyrules_decide` (desktop keys, ⌥[ ⌥], ⌥Tab, Esc) and runs the action on the main queue. |
 | `switcher.c`, `switcher_card.c`, `swkit.c` | List and instant switcher, square switcher, the SkyLight drawing helpers they share. |
 | `thumb.m` | Window screenshots for the square switcher (ScreenCaptureKit). |
 | `border.c` | The focus ring: four thin SkyLight windows. |
