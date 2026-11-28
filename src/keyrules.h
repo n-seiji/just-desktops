@@ -1,5 +1,6 @@
 #pragma once
-// The decisions of the keyboard tap that depend only on the key, the modifier flags and timing.
+// The decisions of the keyboard tap: they depend only on the key, the modifier flags, timing and the state
+// keyrules_decide is handed.
 #include <ApplicationServices/ApplicationServices.h>
 #include <stdbool.h>
 #include <stdint.h>
@@ -26,3 +27,40 @@ bool keyrules_is_call_key(int64_t key, CGEventFlags flags);
 // wait: any shortcut but Command with W, Q, M or H. Close, quit, minimize and hide move focus on their own, so
 // the focus after them must wait. Return or Enter with none of those three down is a call but not quick.
 bool keyrules_is_quick_key(int64_t key, CGEventFlags flags);
+
+// The whole decision of the tap for one event: what it swallows, and what runs because of it. The caller reads the
+// event and the clocks, applies the decision (cancel first, then the action) and holds the state between calls.
+typedef enum { KEYEV_DOWN, KEYEV_FLAGS, KEYEV_TAP_OFF } key_event_type_t;
+
+// The Tab key. The caller reads the throttle clock (now_ns) only for it.
+#define KEYRULES_KEY_TAB 0x30
+
+typedef struct {
+    key_event_type_t type;
+    int64_t key;       // KEYEV_DOWN only
+    bool repeat;       // KEYEV_DOWN only
+    CGEventFlags flags; // the event's; for KEYEV_TAP_OFF the session's, since the release may have been missed while the tap was off
+    double now_abs;    // CFAbsoluteTime for the call and quick-key stamps; read only when KEYEV_DOWN and !repeat
+    uint64_t now_ns;   // CLOCK_UPTIME_RAW for the Tab throttle; read only when the key is KEYRULES_KEY_TAB
+} key_event_t;
+
+typedef struct {
+    bool armed;        // the switcher is open (or about to be): the base modifier is held since a Tab
+    bool step_pending; // see keyrules_step_allowed
+    uint64_t last_step_ns;
+    double last_call_key;  // see keyrules_is_call_key
+    double last_quick_key; // see keyrules_is_quick_key; 0 when the last key press was not one
+} key_state_t;
+
+typedef enum { KEY_ACT_NONE, KEY_ACT_COMMIT, KEY_ACT_STEP, KEY_ACT_SWITCH, KEY_ACT_MOVE, KEY_ACT_HISTORY } key_action_t;
+
+typedef struct {
+    bool swallow;
+    bool cancel;       // close the switcher; runs before the action
+    key_action_t action;
+    int arg;           // direction (+1, -1) for STEP and HISTORY, desktop number (1-based) for SWITCH and MOVE
+} key_decision_t;
+
+// Decides one event and updates *s. keys[0..nkeys) are the desktop keys, the first one is desktop 1; they are
+// tried before the bracket keys.
+key_decision_t keyrules_decide(key_state_t *s, const key_event_t *e, CGEventFlags base, const int64_t *keys, int nkeys);

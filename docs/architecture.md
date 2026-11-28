@@ -11,10 +11,12 @@ just-desktops is one process on the main run loop. It emulates desktops by movin
 | `config.c`, `config_write.c` | Read the config file once; write one key back for the app's settings menu. |
 | `apps.m` | NSWorkspace launch, quit, activate and hide events; the unlock notification; app names and icons; hiding apps. |
 | `wm.c` | The apps and windows we track, and the Accessibility notifications that update them. |
-| `wm_focus.c` | Park and unpark windows, switch desktops, move a window, follow a parked window that gets focus, the `ws` log. |
+| `wm_focus.c` | Switch desktops and hold the screen, move a window to another desktop, follow a parked window that gets focus, the focus history, the `ws` log. |
+| `wm_park.c` | Park and unpark one window, the corner display, checking WindowServer has the moves, putting every window back on the way out. |
+| `wm_ui.c` | Redraw the focus ring and the menu bar for the focused window. |
 | `wm_list.c` | The window lists the switchers and the menu bar draw from. |
 | `ax.c` | Typed reads of Accessibility attributes. |
-| `hotkey.c` | The keyboard event tap: desktop keys, ⌥[ ⌥], ⌥Tab, Esc. |
+| `hotkey.c` | The keyboard event tap: reads each event, asks `keyrules_decide` (desktop keys, ⌥[ ⌥], ⌥Tab, Esc) and runs the action on the main queue. |
 | `switcher.c`, `switcher_card.c`, `swkit.c` | List and instant switcher, square switcher, the SkyLight drawing helpers they share. |
 | `thumb.m` | Window screenshots for the square switcher (ScreenCaptureKit). |
 | `border.c` | The focus ring: four thin SkyLight windows. |
@@ -22,7 +24,7 @@ just-desktops is one process on the main run loop. It emulates desktops by movin
 | `menubar.m` | The status item: strip drawing, click handling. |
 | `menubar_glyph.m`, `menubar_overflow.m`, `menubar_menu.m` | App glyph masks, the "+k" panel, the right-click menu. |
 
-Pure logic, with a unit test each in `tests/`: `select.c` (selection stepping), `keyrules.c` (modifier match, repeat throttle, which keys call a window), `strip.c` (strip geometry: slot positions in the image and in the button, hit test), `order.c` (menu bar order and overflow split), `membership.c` (the saved desktops file: format, parse, pins), `shown.c` (visibility, grace period, parking point), `follow.c` (what to do when a window gets focus), `hist.c` (focus history for ⌥[ ⌥]), `cardmath.c` (easing, card layout and the list highlight's slide), `border_geom.c` (ring rects), `glyph.c` (icon to mask), `title.c` (row text, and which windows of one app get numbered).
+Pure logic, with a unit test each in `tests/`: `select.c` (selection stepping), `keyrules.c` (modifier match, repeat throttle, which keys call a window, and what the keyboard tap swallows and runs for each event), `strip.c` (strip geometry: slot positions in the image and in the button, hit test), `order.c` (menu bar order and overflow split), `membership.c` (the saved desktops file: format, parse, pins), `shown.c` (visibility, grace period, parking point), `follow.c` (what to do when a window gets focus), `hist.c` (focus history for ⌥[ ⌥]), `cardmath.c` (easing, card layout and the list highlight's slide), `border_geom.c` (ring rects), `glyph.c` (icon to mask), `title.c` (row text, and which windows of one app get numbered).
 
 Headers: one per module, and `common.h` for the limits and `sw_entry_t` several modules share. `wm_priv.h` and `menubar_priv.h` are for the files of that module only.
 
@@ -82,4 +84,4 @@ Idle footprint is the product, so these are rules, not tuning.
 
 ## Private APIs
 
-All declarations are in `skylight.h`. SkyLight (window creation, tags, shapes, ordering, level, blur, move and resize notifications, corner radii) is used by `border.c`, `swkit.c`, `switcher.c` and `switcher_card.c`. The one HIServices call, `_AXUIElementGetWindow` (Accessibility element to window id), is used by `wm.c`. A macOS update can break these; everything else is public API.
+All declarations are in `skylight.h`. SkyLight (window creation, tags, shapes, ordering, level, blur, move and resize notifications, corner radii) is used by `border.c`, `swkit.c`, `switcher.c` and `switcher_card.c`; `wm_focus.c` uses its screen hold (`SLSDisableUpdate`, `SLSReenableUpdate`). The one HIServices call, `_AXUIElementGetWindow` (Accessibility element to window id), is used by `wm.c`. A macOS update can break these; everything else is public API.

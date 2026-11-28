@@ -13,110 +13,84 @@
 //                 (`switcher = off`: no panel, each Tab focuses the next window at once). ⌥<key> while it is open closes it first.
 // Only the base modifier (plus Shift) may be down; any other extra modifier lets the key through.
 
-#define KEY_TAB 0x30
-#define KEY_ESC 0x35
-#define KEY_LBRACKET 0x21
-#define KEY_RBRACKET 0x1E
-
 static CFMachPortRef tap;
 static CGEventFlags base; // the configured base modifier
-static bool armed; // switcher open (or about to be): ⌥ is held since a Tab
-static bool step_pending; // see keyrules_step_allowed: the rest of a held Tab's repeats are swallowed
-static uint64_t last_step_ns;
-static double last_call_key;
-static double last_quick_key;
+static int64_t keys[JD_MAX_WS]; // the desktop keys, config_key(i) for each desktop
+static int nkeys;
+static key_state_t st;
 
-static void commit(void) {
-    armed = false;
-    dispatch_async(dispatch_get_main_queue(), ^{ switcher_commit(); });
+double hotkey_last_call_key(void) { return st.last_call_key; }
+double hotkey_last_quick_key(void) { return st.last_quick_key; }
+
+static void apply(key_decision_t d) {
+    if (d.cancel) dispatch_async(dispatch_get_main_queue(), ^{ switcher_cancel(); });
+    int arg = d.arg;
+    switch (d.action) {
+    case KEY_ACT_NONE:
+        break;
+    case KEY_ACT_COMMIT:
+        dispatch_async(dispatch_get_main_queue(), ^{ switcher_commit(); });
+        break;
+    case KEY_ACT_STEP:
+        dispatch_async(dispatch_get_main_queue(), ^{
+            switcher_step(arg);
+            st.step_pending = false;
+        });
+        break;
+    case KEY_ACT_SWITCH:
+        dispatch_async(dispatch_get_main_queue(), ^{
+            if (arg == wm_current()) {
+                wm_dismiss_every();
+            } else {
+                wm_set_trigger("hotkey");
+                wm_switch(arg);
+            }
+        });
+        break;
+    case KEY_ACT_MOVE:
+        dispatch_async(dispatch_get_main_queue(), ^{ wm_move_focused(arg); });
+        break;
+    case KEY_ACT_HISTORY:
+        dispatch_async(dispatch_get_main_queue(), ^{ wm_history(arg); });
+        break;
+    }
 }
-
-static void cancel(void) {
-    armed = false;
-    dispatch_async(dispatch_get_main_queue(), ^{ switcher_cancel(); });
-}
-
-double hotkey_last_call_key(void) { return last_call_key; }
-double hotkey_last_quick_key(void) { return last_quick_key; }
 
 static CGEventRef on_key(CGEventTapProxy proxy, CGEventType type, CGEventRef ev, void *ctx) {
     (void)proxy; (void)ctx;
-    if (type == kCGEventTapDisabledByTimeout || type == kCGEventTapDisabledByUserInput) {
+    key_event_t e = {0};
+    switch (type) {
+    case kCGEventTapDisabledByTimeout:
+    case kCGEventTapDisabledByUserInput:
         CGEventTapEnable(tap, true);
-        // The ⌥ release may have been missed while the tap was off.
-        if (armed && !(CGEventSourceFlagsState(kCGEventSourceStateCombinedSessionState) & base)) commit();
+        e.type = KEYEV_TAP_OFF;
+        e.flags = CGEventSourceFlagsState(kCGEventSourceStateCombinedSessionState);
+        break;
+    case kCGEventFlagsChanged:
+        e.type = KEYEV_FLAGS;
+        e.flags = CGEventGetFlags(ev);
+        break;
+    case kCGEventKeyDown:
+        e.type = KEYEV_DOWN;
+        e.key = CGEventGetIntegerValueField(ev, kCGKeyboardEventKeycode);
+        e.repeat = CGEventGetIntegerValueField(ev, kCGKeyboardEventAutorepeat) != 0;
+        e.flags = CGEventGetFlags(ev);
+        // The tap sees every key typed: no clock is read for a held key that is not Tab.
+        if (!e.repeat) e.now_abs = CFAbsoluteTimeGetCurrent();
+        if (e.key == KEYRULES_KEY_TAB) e.now_ns = clock_gettime_nsec_np(CLOCK_UPTIME_RAW);
+        break;
+    default:
         return ev;
     }
-    if (type == kCGEventFlagsChanged) {
-        if (armed && !(CGEventGetFlags(ev) & base)) commit();
-        return ev;
-    }
-    if (type != kCGEventKeyDown) return ev;
-    int64_t key = CGEventGetIntegerValueField(ev, kCGKeyboardEventKeycode);
-    bool repeat = CGEventGetIntegerValueField(ev, kCGKeyboardEventAutorepeat) != 0;
-    CGEventFlags flags = CGEventGetFlags(ev);
-    // Before any early return, so Cmd-Tab and other apps' shortcuts are seen. Held-down repeats are not calls.
-    if (!repeat) {
-        double now = CFAbsoluteTimeGetCurrent();
-        if (keyrules_is_call_key(key, flags)) last_call_key = now;
-        // Every key replaces the last, so a ⌘W after a shortcut cancels it.
-        last_quick_key = keyrules_is_quick_key(key, flags) ? now : 0;
-    }
-    if (armed && key == KEY_ESC) {
-        cancel();
-        return NULL;
-    }
-
-    mods_t mods = keyrules_mods(flags, base);
-    if (mods == MODS_OTHER) return ev;
-    bool alt = mods == MODS_BASE;
-
-    if (key == KEY_TAB) {
-        int dir = alt ? 1 : -1;
-        armed = true;
-        uint64_t now = clock_gettime_nsec_np(CLOCK_UPTIME_RAW);
-        if (!keyrules_step_allowed(repeat, step_pending, now, last_step_ns)) return NULL;
-        last_step_ns = now;
-        step_pending = true;
-        dispatch_async(dispatch_get_main_queue(), ^{
-            switcher_step(dir);
-            step_pending = false;
-        });
-        return NULL;
-    }
-    for (int i = 0; i < config_workspaces(); i++) {
-        if (key != config_key(i)) continue;
-        int ws = i + 1;
-        if (!repeat) {
-            if (armed) cancel();
-            if (alt) {
-                dispatch_async(dispatch_get_main_queue(), ^{
-                    if (ws == wm_current()) {
-                        wm_dismiss_every();
-                    } else {
-                        wm_set_trigger("hotkey");
-                        wm_switch(ws);
-                    }
-                });
-            } else {
-                dispatch_async(dispatch_get_main_queue(), ^{ wm_move_focused(ws); });
-            }
-        }
-        return NULL;
-    }
-    if (alt && (key == KEY_LBRACKET || key == KEY_RBRACKET)) {
-        if (!repeat) {
-            if (armed) cancel();
-            int dir = key == KEY_LBRACKET ? -1 : 1;
-            dispatch_async(dispatch_get_main_queue(), ^{ wm_history(dir); });
-        }
-        return NULL;
-    }
-    return ev;
+    key_decision_t d = keyrules_decide(&st, &e, base, keys, nkeys);
+    apply(d);
+    return d.swallow ? NULL : ev;
 }
 
 bool hotkey_init(void) {
     base = config_modifier();
+    nkeys = config_workspaces();
+    for (int i = 0; i < nkeys; i++) keys[i] = config_key(i);
     tap = CGEventTapCreate(kCGSessionEventTap, kCGHeadInsertEventTap, kCGEventTapOptionDefault,
                            CGEventMaskBit(kCGEventKeyDown) | CGEventMaskBit(kCGEventFlagsChanged), on_key, NULL);
     if (!tap) return false;

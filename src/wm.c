@@ -14,7 +14,7 @@
 
 // The apps and windows the manager knows, kept in step with Accessibility notifications. Workspaces
 // are emulated like AeroSpace does: windows of inactive workspaces are parked at the bottom-right
-// corner of the display furthest right, so macOS Spaces / SIP are never touched (see wm_focus.c).
+// corner of the display furthest right, so macOS Spaces / SIP are never touched (see wm_park.c).
 
 win_t *wins;
 int nwins;
@@ -248,7 +248,7 @@ static void add_app(pid_t pid, int assign, bool nopreview, int attempt) {
 void wm_add_app(pid_t pid, const char *bundle_id) {
     if (wm_find_app(pid)) return; // apps_rescan offers every running app, and each redraw costs a focus query
     add_app(pid, config_assign(bundle_id), config_no_preview(bundle_id), 0);
-    if (menubar_ready()) wm_refresh_menubar(wm_focused());
+    wm_ui_menubar_now();
 }
 
 // Under a lock the log shows no window tracked until its app was activated, so the first look at start can
@@ -258,7 +258,7 @@ void wm_rescan(void) {
     int before = nwins;
     for (int i = 0; i < napps; i++) track_windows(&apps[i]);
     wm_log_rescan(nwins - before);
-    if (menubar_ready()) wm_refresh_menubar(wm_focused());
+    wm_ui_menubar_now();
     wm_settle(); // as at start: a parked window the scan finds focused is not a call for its desktop
     wm_on_focus();
 }

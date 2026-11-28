@@ -2,7 +2,6 @@
 #include "wm_priv.h"
 #include "apps.h"
 #include "ax.h"
-#include "menubar.h"
 #include "order.h"
 #include "select.h"
 #include "shown.h"
@@ -11,14 +10,6 @@
 #include <string.h>
 
 // The windows of the current desktop as the switchers and the menu bar list them.
-
-static double fresh_until; // until then, the menu bar prefers the window we just focused...
-static uint32_t fresh_wid; // ...to the one macOS reports as focused, which lags behind
-
-void wm_mark_fresh(uint32_t wid, double now) {
-    fresh_until = now + FRESH_S;
-    fresh_wid = wid;
-}
 
 // Replaces each entry's title with its row text: see title_label_all.
 static void label_entries(sw_entry_t *list, int n) {
@@ -75,17 +66,6 @@ static displays_t read_displays(void) {
     return d;
 }
 
-// The online displays, not the active ones: a display that is asleep is still where it was, and a window
-// parked at a corner it touches would be in view when it wakes.
-CGRect wm_park_display(void) {
-    CGDirectDisplayID ds[8];
-    CGRect r[8];
-    uint32_t n = 0;
-    CGGetOnlineDisplayList(8, ds, &n);
-    for (uint32_t k = 0; k < n; k++) r[k] = CGDisplayBounds(ds[k]);
-    return n ? shown_park_display(r, n) : CGDisplayBounds(CGMainDisplayID());
-}
-
 // Whether wid is really shown: in that list, not transparent, and with a visible part on a display (so not
 // a hidden app's window, one on another Space, alpha 0 or off screen). True when the list is unavailable.
 static bool is_shown(CFArrayRef shown, const displays_t *ds, uint32_t wid) {
@@ -104,38 +84,6 @@ static bool is_shown(CFArrayRef shown, const displays_t *ds, uint32_t wid) {
         return shown_visible(alpha, r, ds->r, ds->n);
     }
     return false;
-}
-
-bool wm_in_place(double since) {
-    const void **ids = malloc(sizeof *ids * (nwins ? nwins : 1));
-    if (!ids) return true;
-    CFIndex n = 0;
-    for (int i = 0; i < nwins; i++) {
-        const win_t *w = &wins[i];
-        bool came = wm_here(w) && !w->hidden && w->shown_at >= since;
-        bool went = w->hidden && w->parked_at >= since;
-        // The array holds the ids themselves, as pointer-sized values with no callbacks.
-        if ((came || went) && !w->minimized && !apps_hidden(w->pid)) ids[n++] = (const void *)(uintptr_t)w->wid;
-    }
-    CFArrayRef want = n ? CFArrayCreate(kCFAllocatorDefault, ids, n, NULL) : NULL;
-    free(ids);
-    CFArrayRef info = want ? CGWindowListCreateDescriptionFromArray(want) : NULL;
-    if (want) CFRelease(want);
-    if (!info) return true;
-    CGRect park = wm_park_display();
-    bool ok = true;
-    for (CFIndex i = 0; ok && i < CFArrayGetCount(info); i++) {
-        CFDictionaryRef d = CFArrayGetValueAtIndex(info, i);
-        CFNumberRef num = CFDictionaryGetValue(d, kCGWindowNumber);
-        CFDictionaryRef b = CFDictionaryGetValue(d, kCGWindowBounds);
-        CGRect r;
-        int64_t id = 0;
-        if (!num || !b || !CFNumberGetValue(num, kCFNumberSInt64Type, &id) || !CGRectMakeWithDictionaryRepresentation(b, &r)) continue;
-        const win_t *w = wm_find_win((uint32_t)id);
-        if (w) ok = shown_is_parked(r.origin, park) == w->hidden;
-    }
-    CFRelease(info);
-    return ok;
 }
 
 // On this desktop, not minimized or parked.
@@ -263,15 +211,10 @@ static int menubar_order(pid_t *pids, uint32_t *wids) {
     return nv;
 }
 
-void wm_refresh_menubar(win_t *f) {
-    if (!menubar_ready()) return; // apps_init runs before menubar_init: the first draw is wm_on_focus in main
-    double now = CFAbsoluteTimeGetCurrent();
-    uint32_t front = shown_front(now, fresh_until, fresh_wid, f ? f->wid : 0);
-    pid_t pids[JD_MENUBAR_WINS];
-    uint32_t wids[JD_MENUBAR_WINS];
-    int n = menubar_order(pids, wids), shown_n, over;
-    order_split(n, JD_MENUBAR_SLOTS, &shown_n, &over);
-    menubar_update(cur_ws, pids, wids, shown_n, over, order_hash(wids + shown_n, over), front);
+void wm_menubar_rows(pid_t *pids, uint32_t *wids, int *shown_n, int *over, uint32_t *hash) {
+    int n = menubar_order(pids, wids);
+    order_split(n, JD_MENUBAR_SLOTS, shown_n, over);
+    *hash = order_hash(wids + *shown_n, *over);
 }
 
 // The windows behind the menu bar's "+k" slot, in menu bar order, with +1 icon/app/title
