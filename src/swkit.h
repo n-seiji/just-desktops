@@ -3,8 +3,7 @@
 #include <CoreText/CoreText.h>
 #include <dispatch/dispatch.h>
 
-// Drawing and window helpers shared by the list (switcher.c) and card (switcher_card.c) switchers;
-// sw_free_entries also serves the menu bar's "+k" panel.
+// Drawing and window helpers shared by the list (switcher.c) and card (switcher_card.c) switchers.
 
 // The panel's colours; the dark one is chosen unless the system is in Light mode.
 typedef struct {
@@ -39,9 +38,7 @@ void sw_close_window(int cid, uint32_t *wid, CGContextRef *ctx);
 void sw_timer_start(dispatch_source_t *t, void (*fn)(void));
 void sw_timer_stop(dispatch_source_t *t);
 
-// Frees the entries wm_windows or wm_overflow returned.
-void sw_free_entries(sw_entry_t *ents, int n);
-// sw_free_entries on a switcher's own list, which it clears, then gives the freed memory back to the system.
+// sw_free_entries (common.h) on a switcher's own list, which it clears, then gives the freed memory back to the system.
 void sw_drop_entries(sw_entry_t **ents, int *n);
 // The header text of both switchers, "Desktop 3" for ws 3. +1 retained.
 CFStringRef sw_desktop_title(int ws);
