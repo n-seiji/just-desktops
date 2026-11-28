@@ -32,3 +32,7 @@ strip_hit_t strip_hit(double x, double button_w, int reserve, int n, int over) {
 double strip_overflow_left(double button_w, int reserve, int n, int over) {
     return strip_left(button_w, reserve, n, over) + n * (STRIP_SLOT + STRIP_GAP);
 }
+
+int strip_image_slot_x(int reserve, int n, int over, int i) {
+    return strip_width(reserve) - strip_width(strip_slots(n, over)) + i * (STRIP_SLOT + STRIP_GAP);
+}
