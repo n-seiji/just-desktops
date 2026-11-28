@@ -2,7 +2,6 @@
 #include "wm_priv.h"
 #include "apps.h"
 #include "ax.h"
-#include "border.h"
 #include "config.h"
 #include "follow.h"
 #include "hist.h"

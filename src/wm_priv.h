@@ -1,5 +1,5 @@
 #pragma once
-// What wm.c, wm_focus.c, wm_park.c and wm_list.c share. Other modules use wm.h.
+// What wm.c, wm_focus.c, wm_park.c, wm_ui.c and wm_list.c share. Other modules use wm.h.
 #include "common.h"
 #include <dispatch/dispatch.h>
 
@@ -53,7 +53,7 @@ CGRect wm_park_display(void);
 // follows some tens of ms later. True when WindowServer cannot be asked.
 bool wm_in_place(double since);
 
-// wm_focus.c: switching, focus, the hold, the border and the ws log
+// wm_focus.c: switching, focus, the hold and the ws log
 void wm_hold_drop(void); // the way out: let the screen go and cancel the polls waiting on the hold
 void wm_log_ws(const win_t *w, int old, const char *reason); // os_log a desktop change (old -1: first tracked)
 void wm_log_recover(const win_t *w); // os_log a window found parked by a previous run
@@ -61,14 +61,14 @@ void wm_log_rescan(int n); // os_log the look after an unlock, with the number o
 void wm_log_repark(int n); // os_log n parked windows sent to the new corner
 void wm_log_reshow(const win_t *w, CGPoint want, CGPoint got); // os_log an unparked window that was not where it was sent
 
-// wm_list.c: window lists and the menu bar
-bool wm_mission_control_up(void);
-
-void wm_refresh_menubar(win_t *f);
-// The switchable windows of this desktop for the menu bar: pids and wids hold JD_MENUBAR_WINS. The first
-// *shown_n get a slot, the next *over are behind the "+k" one, and *hash tells that set apart (see order.h).
-void wm_menubar_rows(pid_t *pids, uint32_t *wids, int *shown_n, int *over, uint32_t *hash);
+// wm_ui.c: the focus ring and the menu bar
 void wm_ui_draw(win_t *w); // the ring and the menu bar for w, the focused window looked up once by the caller
 void wm_ui_menubar_now(void); // the menu bar for the focused window, if it is up
 void wm_refresh_menubar_later(void); // again once WindowServer lists the windows just shown or focused
 void wm_mark_fresh(uint32_t wid, double now); // the menu bar prefers wid to macOS's lagging focus for a moment
+
+// wm_list.c: window lists and the menu bar's rows
+bool wm_mission_control_up(void);
+// The switchable windows of this desktop for the menu bar: pids and wids hold JD_MENUBAR_WINS. The first
+// *shown_n get a slot, the next *over are behind the "+k" one, and *hash tells that set apart (see order.h).
+void wm_menubar_rows(pid_t *pids, uint32_t *wids, int *shown_n, int *over, uint32_t *hash);

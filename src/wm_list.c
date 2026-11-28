@@ -2,7 +2,6 @@
 #include "wm_priv.h"
 #include "apps.h"
 #include "ax.h"
-#include "menubar.h"
 #include "order.h"
 #include "select.h"
 #include "shown.h"
