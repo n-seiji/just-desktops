@@ -5,7 +5,7 @@ description: Build, test and drive just-desktops (the macOS desktop switcher in 
 
 # Verify just-desktops
 
-The unit tests cover only the pure modules. Everything in `wm*.c`, `switcher*.c`, `hotkey.c`, `border.c`, `menubar*.m` and `main.m` is proved only by driving the running app. Paths below are relative to the repo root.
+The unit tests cover only the pure modules. Everything in `wm*.c`, `switcher*.c`, `border.c`, `menubar*.m` and `main.m` is proved only by driving the running app, and so is the tap in `hotkey.c`: what it swallows is decided in `keyrules.c` and tested, the tap around it is not. Paths below are relative to the repo root.
 
 ## Gate
 

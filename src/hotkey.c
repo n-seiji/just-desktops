@@ -75,7 +75,7 @@ static CGEventRef on_key(CGEventTapProxy proxy, CGEventType type, CGEventRef ev,
         e.key = CGEventGetIntegerValueField(ev, kCGKeyboardEventKeycode);
         e.repeat = CGEventGetIntegerValueField(ev, kCGKeyboardEventAutorepeat) != 0;
         e.flags = CGEventGetFlags(ev);
-        // The tap sees every key typed: read each clock only for the rule that uses it.
+        // The tap sees every key typed: no clock is read for a held key that is not Tab.
         if (!e.repeat) e.now_abs = CFAbsoluteTimeGetCurrent();
         if (e.key == KEYRULES_KEY_TAB) e.now_ns = clock_gettime_nsec_np(CLOCK_UPTIME_RAW);
         break;

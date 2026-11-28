@@ -156,6 +156,7 @@ static void decide_all(void) {
         {"Alt+1 armed: cancel, then switch", 0, 0, 0, ARMED, DOWN(kVK_ANSI_1, ALT), D(true, true, KEY_ACT_SWITCH, 1), ST(false, false, 0, NOW, NOW)},
         {"Alt+Shift+2 armed: cancel, then move", 0, 0, 0, ARMED, DOWN(kVK_ANSI_2, ALT | SHIFT), D(true, true, KEY_ACT_MOVE, 2), ST(false, false, 0, NOW, NOW)},
         {"Alt+1 repeat: swallowed, nothing runs", 0, 0, 0, IDLE, REP(kVK_ANSI_1, ALT), D(true, false, KEY_ACT_NONE, 0), IDLE},
+        {"Alt+Shift+1 repeat: swallowed, nothing runs", 0, 0, 0, IDLE, REP(kVK_ANSI_1, ALT | SHIFT), D(true, false, KEY_ACT_NONE, 0), IDLE},
         {"Alt+1 repeat armed: no cancel, still armed", 0, 0, 0, ARMED, REP(kVK_ANSI_1, ALT), D(true, false, KEY_ACT_NONE, 0), ARMED},
         {"Alt+Shift+1 repeat armed: no cancel, still armed", 0, 0, 0, ARMED, REP(kVK_ANSI_1, ALT | SHIFT), D(true, false, KEY_ACT_NONE, 0), ARMED},
         {"a key past nkeys is not a desktop key", 0, DESK, 3, IDLE, DOWN(kVK_ANSI_Q, ALT), PASS, ST(false, false, 0, NOW, NOW)},

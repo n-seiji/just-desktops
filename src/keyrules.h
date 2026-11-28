@@ -1,5 +1,6 @@
 #pragma once
-// The decisions of the keyboard tap that depend only on the key, the modifier flags and timing.
+// The decisions of the keyboard tap: they depend only on the key, the modifier flags, timing and the state
+// keyrules_decide is handed.
 #include <ApplicationServices/ApplicationServices.h>
 #include <stdbool.h>
 #include <stdint.h>
