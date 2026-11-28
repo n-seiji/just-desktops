@@ -220,15 +220,22 @@ static int menubar_order(pid_t *pids, uint32_t *wids) {
     return nv;
 }
 
+void wm_menubar_rows(pid_t *pids, uint32_t *wids, int *shown_n, int *over, uint32_t *hash) {
+    int n = menubar_order(pids, wids);
+    order_split(n, JD_MENUBAR_SLOTS, shown_n, over);
+    *hash = order_hash(wids + *shown_n, *over);
+}
+
 void wm_refresh_menubar(win_t *f) {
     if (!menubar_ready()) return; // apps_init runs before menubar_init: the first draw is wm_on_focus in main
     double now = CFAbsoluteTimeGetCurrent();
     uint32_t front = shown_front(now, fresh_until, fresh_wid, f ? f->wid : 0);
     pid_t pids[JD_MENUBAR_WINS];
     uint32_t wids[JD_MENUBAR_WINS];
-    int n = menubar_order(pids, wids), shown_n, over;
-    order_split(n, JD_MENUBAR_SLOTS, &shown_n, &over);
-    menubar_update(cur_ws, pids, wids, shown_n, over, order_hash(wids + shown_n, over), front);
+    int shown_n, over;
+    uint32_t hash;
+    wm_menubar_rows(pids, wids, &shown_n, &over, &hash);
+    menubar_update(cur_ws, pids, wids, shown_n, over, hash, front);
 }
 
 // The windows behind the menu bar's "+k" slot, in menu bar order, with +1 icon/app/title

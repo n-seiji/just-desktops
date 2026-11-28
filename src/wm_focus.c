@@ -186,16 +186,21 @@ static void refresh_border(win_t *w) {
 
 void wm_refresh_ui(void) {
     if (!config_border() && !menubar_ready()) return;
-    win_t *f = wm_focused();
-    refresh_border(f);
-    wm_refresh_menubar(f);
+    wm_ui_draw(wm_focused());
+}
+
+// The ring and the menu bar for w, which the caller looked up once: see refresh_border.
+void wm_ui_draw(win_t *w) {
+    refresh_border(w);
+    wm_refresh_menubar(w);
+}
+
+// The menu bar for the focused window. Not asked before it is up: the focus query is a round trip.
+void wm_ui_menubar_now(void) {
+    if (menubar_ready()) wm_refresh_menubar(wm_focused());
 }
 
 // ---- focus and desktop changes ----
-
-static void run_after(double seconds, dispatch_block_t block) {
-    dispatch_after(dispatch_time(DISPATCH_TIME_NOW, seconds * NSEC_PER_SEC), dispatch_get_main_queue(), block);
-}
 
 // While settling, a parked window that takes focus is left alone, so nothing would look at it again once the
 // quiet period ends. One check per quiet period is queued for then; only the newest one runs.
@@ -365,14 +370,13 @@ static void on_focus(bool recheck) {
         if (w->ws != WS_EVERY) last_focus[cur_ws] = w->wid;
         visit(w->wid);
     }
-    refresh_border(w);
-    wm_refresh_menubar(w);
+    wm_ui_draw(w);
 }
 
 void wm_on_focus(void) { on_focus(false); }
 
 // WindowServer may not list the windows just shown or focused as on screen yet: check again once it does.
-static void refresh_menubar_later(void) {
+void wm_refresh_menubar_later(void) {
     if (!menubar_ready()) return;
     run_after(FRESH_S + 0.05, ^{ wm_refresh_menubar(wm_focused()); });
 }
@@ -403,11 +407,10 @@ static void finish_change(win_t *t, bool took) {
     // the ring's place would wait out another timeout, and the ring belongs to the window that kept the focus.
     if (!took) {
         wm_refresh_ui();
-    } else if (config_border() || menubar_ready()) {
-        refresh_border(t);
-        wm_refresh_menubar(t);
+    } else {
+        wm_ui_draw(t);
     }
-    refresh_menubar_later();
+    wm_refresh_menubar_later();
 }
 
 // Windows change place one app at a time: each move is a round trip to its app, and WindowServer shows it
@@ -537,7 +540,7 @@ void wm_focus_wid(uint32_t wid) {
     focus(w);
     wm_mark_fresh(wid, CFAbsoluteTimeGetCurrent());
     wm_refresh_ui();
-    refresh_menubar_later();
+    wm_refresh_menubar_later();
 }
 
 void wm_history_hold(void) { hold_switcher = true; }
