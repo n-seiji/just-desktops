@@ -41,6 +41,27 @@ static void check_labels(const char *app, const char *titles[], int n, const cha
     CFRelease(a);
 }
 
+// n windows given as {app, title} pairs; want is each row text, in order.
+static void check_all(const char *name, const char *pairs[][2], int n, const char *want[]) {
+    CFStringRef apps[8], titles[8];
+    for (int i = 0; i < n; i++) {
+        apps[i] = cf(pairs[i][0]);
+        titles[i] = cf(pairs[i][1]);
+    }
+    title_label_all(apps, titles, n);
+    for (int i = 0; i < n; i++) {
+        char got[256] = "";
+        if (titles[i]) CFStringGetCString(titles[i], got, sizeof got, kCFStringEncodingUTF8);
+        bool ok = want[i] ? titles[i] && !strcmp(got, want[i]) : !titles[i];
+        if (!ok) {
+            printf("FAIL title_label_all %s[%d] = %s%s%s; want %s\n", name, i, titles[i] ? "\"" : "", titles[i] ? got : "NULL", titles[i] ? "\"" : "", want[i] ? want[i] : "NULL");
+            failed++;
+        }
+        if (titles[i]) CFRelease(titles[i]);
+        if (apps[i]) CFRelease(apps[i]);
+    }
+}
+
 int main(void) {
     check("side-project ⌥Tab ウィンドウ一覧の案 - Google Chrome - Pat", "Google Chrome", "side-project ⌥Tab ウィンドウ一覧の案");
     check("team-ops（チャンネル） - acme - Slack", "Slack", "team-ops（チャンネル） - acme");
@@ -57,6 +78,20 @@ int main(void) {
     check_labels("Google Chrome", (const char *[]){"Docs", "Inbox"}, 2, (const char *[]){"Docs", "Inbox"});
     check_labels("Code", (const char *[]){NULL, NULL}, 2, (const char *[]){"Code 1", "Code 2"});
     check_labels("Code", (const char *[]){"main.c", NULL, "main.c"}, 3, (const char *[]){"main.c", "Code 2", "main.c 3"});
+    check_all("single", (const char *[][2]){{"Slack", "general"}}, 1, (const char *[]){"Slack"});
+    check_all("two of one app", (const char *[][2]){{"Chrome", "Docs"}, {"Chrome", "Inbox"}}, 2, (const char *[]){"Docs", "Inbox"});
+    // groups number from 1 on their own, and rows keep the input order
+    check_all("interleaved", (const char *[][2]){{"Code", NULL}, {"Slack", "general"}, {"Code", NULL}, {"Mail", NULL}}, 4,
+              (const char *[]){"Code 1", "Slack", "Code 2", "Mail"});
+    check_all("same title", (const char *[][2]){{"Code", "main.c"}, {"Mail", "main.c"}, {"Code", "main.c"}}, 3,
+              (const char *[]){"main.c", "Mail", "main.c 2"});
+    // the app name is compared exactly: a differently cased app is its own group
+    check_all("case", (const char *[][2]){{"Code", NULL}, {"code", NULL}}, 2, (const char *[]){"Code", "code"});
+    // an empty app name is a name like any other
+    check_all("empty app", (const char *[][2]){{"", NULL}, {"", "x"}}, 2, (const char *[]){" 1", "x"});
+    // a NULL app is skipped and its title kept, NULL or not
+    check_all("no app", (const char *[][2]){{NULL, "t"}, {NULL, NULL}, {"Code", NULL}}, 3, (const char *[]){"t", NULL, "Code"});
+    check_all("none", NULL, 0, NULL);
     puts(failed ? "FAILED" : "ok");
     return failed != 0;
 }

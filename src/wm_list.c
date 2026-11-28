@@ -20,30 +20,17 @@ void wm_mark_fresh(uint32_t wid, double now) {
     fresh_wid = wid;
 }
 
-// Replaces each entry's title with its row text: see title_labels.
+// Replaces each entry's title with its row text: see title_label_all.
 static void label_entries(sw_entry_t *list, int n) {
-    int *at = malloc(sizeof *at * n);
-    CFStringRef *titles = malloc(sizeof *titles * n * 2), *labels = titles + n;
-    if (at && titles) {
-        for (int i = 0; i < n; i++) {
-            bool first = list[i].app != NULL;
-            for (int j = 0; j < i && first; j++) first = !list[j].app || !CFEqual(list[j].app, list[i].app);
-            if (!first) continue;
-            int k = 0;
-            for (int j = i; j < n; j++) {
-                if (!list[j].app || !CFEqual(list[j].app, list[i].app)) continue;
-                at[k] = j;
-                titles[k++] = list[j].title;
-            }
-            title_labels(list[i].app, titles, k, labels);
-            for (int m = 0; m < k; m++) {
-                if (list[at[m]].title) CFRelease(list[at[m]].title);
-                list[at[m]].title = labels[m];
-            }
-        }
+    CFStringRef *names = malloc(sizeof *names * n * 2), *titles = names + n;
+    if (!names) return;
+    for (int i = 0; i < n; i++) {
+        names[i] = list[i].app;
+        titles[i] = list[i].title;
     }
-    free(at);
-    free(titles);
+    title_label_all(names, titles, n);
+    for (int i = 0; i < n; i++) list[i].title = titles[i];
+    free(names);
 }
 
 // WindowServer's list of the windows on screen right now. NULL when it is unavailable.
