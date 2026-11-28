@@ -62,10 +62,14 @@ clang .claude/skills/verify-just-desktops/drive.c -o "$TMPDIR/jd-drive" -framewo
 | Command | What it does |
 | --- | --- |
 | `jd-drive key 18` | Presses `⌥1` (18 is the key code of `1`). It always sends `⌥`, so it fits only the default `modifier`. The desktop keys are in `~/.config/just-desktops/config`. |
+| `jd-drive chord <opt\|optshift> <keycode> [-n steps] [-t hold_ms] [-a]` | Presses `⌥` (or `⌥⇧`) as a real flags-changed event, presses the key `steps` times with it held (default 1), waits `hold_ms` (default 0), then releases with flags 0. `-a` sends the key as one held key: the first press, then autorepeats at 30 ms. `hold_ms` 0 is the quick tap that commits a switcher at once. The `⌥Tab` panel opens after 150 ms from the first Tab, so use `-t 300` to see it. SIGINT and SIGTERM still release the modifier. Tab is 48, `[` 33, `]` 30, Esc 53. |
+| `jd-drive probe` | Prints one `<row> pass\|swallow` line per key event of a fixed table: whether the key-down got past just-desktops's tap. Run it with just-desktops running, the default `modifier` and the default `keys`. See below. |
 | `jd-drive click <x> <y>` | Left click, in global display points. |
 | `jd-drive mc` | Prints `1` while Mission Control is up or zooming out. |
-| `jd-drive windows` | Lists on-screen windows above layer 0. |
+| `jd-drive windows` | Lists on-screen windows above layer 0. `windows all` adds layer 0, the app windows: a parked one shows as a sliver at the corner of the display furthest right. |
 | `open -a "Mission Control"` | Toggles Mission Control. |
+
+`probe` taps the session at the annotated point, after the app's own session tap, and tags its events with `kCGEventSourceUserData`, so your own typing is not counted. The tap drops the tagged events, so nothing it posts reaches the frontmost app. The terminal needs Accessibility, and Input Monitoring if macOS asks. It exits 1 with a message on stderr if the tap cannot be created. It leaves ⌥ up and Esc cancels the switcher, but it does act on the desktop: `⌥Tab` and `⌥⇧Tab` move the focus when `switcher = off`, and `⌥[` then `⌥]` go back and forward in the focus history. Run it with nothing important in flux, and compare two runs with `diff`.
 
 Take click points from a screenshot or a frame of a recording, divided by the display scale (2 on a Retina display). In zsh, `log` is a builtin: call `/usr/bin/log`.
 
