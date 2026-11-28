@@ -1,5 +1,5 @@
 #pragma once
-// What wm.c, wm_focus.c and wm_list.c share. Other modules use wm.h.
+// What wm.c, wm_focus.c, wm_park.c and wm_list.c share. Other modules use wm.h.
 #include "common.h"
 
 typedef struct {
@@ -37,9 +37,18 @@ app_t *wm_find_app(pid_t pid);
 win_t *wm_find_win(uint32_t wid);
 win_t *wm_focused(void); // the window macOS reports as focused, tracked now if it was not
 
-// wm_focus.c: parking, focus and the border
+// wm_park.c: moving windows to the corner and back
 void wm_hide(win_t *w);
 AXError wm_show(win_t *w); // moves it back to its place; the error of the move
+// The display windows are parked at the corner of (see shown_park_display); the main display if none is listed.
+CGRect wm_park_display(void);
+
+// Whether WindowServer has every window moved at or after `since` where it was sent: the unparked ones out
+// of the corner, the parked ones in it. Accessibility reports a move as done at once; the window itself
+// follows some tens of ms later. True when WindowServer cannot be asked.
+bool wm_in_place(double since);
+
+// wm_focus.c: switching, focus, the hold, the border and the ws log
 void wm_hold_drop(void); // the way out: let the screen go and cancel the polls waiting on the hold
 void wm_log_ws(const win_t *w, int old, const char *reason); // os_log a desktop change (old -1: first tracked)
 void wm_log_recover(const win_t *w); // os_log a window found parked by a previous run
@@ -47,15 +56,8 @@ void wm_log_rescan(int n); // os_log the look after an unlock, with the number o
 void wm_log_repark(int n); // os_log n parked windows sent to the new corner
 void wm_log_reshow(const win_t *w, CGPoint want, CGPoint got); // os_log an unparked window that was not where it was sent
 
-// wm_list.c: the display windows are parked at the corner of (see shown_park_display); the main display if none is listed
-CGRect wm_park_display(void);
-
-// Whether WindowServer has every window moved at or after `since` where it was sent: the unparked ones out
-// of the corner, the parked ones in it. Accessibility reports a move as done at once; the window itself
-// follows some tens of ms later. True when WindowServer cannot be asked.
-bool wm_in_place(double since);
+// wm_list.c: window lists and the menu bar
 bool wm_mission_control_up(void);
 
-// wm_list.c: window lists and the menu bar
 void wm_refresh_menubar(win_t *f);
 void wm_mark_fresh(uint32_t wid, double now); // the menu bar prefers wid to macOS's lagging focus for a moment

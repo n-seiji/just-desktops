@@ -11,7 +11,8 @@ just-desktops is one process on the main run loop. It emulates desktops by movin
 | `config.c`, `config_write.c` | Read the config file once; write one key back for the app's settings menu. |
 | `apps.m` | NSWorkspace launch, quit, activate and hide events; the unlock notification; app names and icons; hiding apps. |
 | `wm.c` | The apps and windows we track, and the Accessibility notifications that update them. |
-| `wm_focus.c` | Park and unpark windows, switch desktops, move a window, follow a parked window that gets focus, the `ws` log. |
+| `wm_focus.c` | Switch desktops and hold the screen, move a window to another desktop, follow a parked window that gets focus, the focus history, the `ws` log, the border and menu bar redraw. |
+| `wm_park.c` | Park and unpark one window, the corner display, checking WindowServer has the moves, putting every window back on the way out. |
 | `wm_list.c` | The window lists the switchers and the menu bar draw from. |
 | `ax.c` | Typed reads of Accessibility attributes. |
 | `hotkey.c` | The keyboard event tap: desktop keys, ⌥[ ⌥], ⌥Tab, Esc. |
@@ -82,4 +83,4 @@ Idle footprint is the product, so these are rules, not tuning.
 
 ## Private APIs
 
-All declarations are in `skylight.h`. SkyLight (window creation, tags, shapes, ordering, level, blur, move and resize notifications, corner radii) is used by `border.c`, `swkit.c`, `switcher.c` and `switcher_card.c`. The one HIServices call, `_AXUIElementGetWindow` (Accessibility element to window id), is used by `wm.c`. A macOS update can break these; everything else is public API.
+All declarations are in `skylight.h`. SkyLight (window creation, tags, shapes, ordering, level, blur, move and resize notifications, corner radii) is used by `border.c`, `swkit.c`, `switcher.c` and `switcher_card.c`; `wm_focus.c` uses its screen hold (`SLSDisableUpdate`, `SLSReenableUpdate`). The one HIServices call, `_AXUIElementGetWindow` (Accessibility element to window id), is used by `wm.c`. A macOS update can break these; everything else is public API.

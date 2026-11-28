@@ -75,17 +75,6 @@ static displays_t read_displays(void) {
     return d;
 }
 
-// The online displays, not the active ones: a display that is asleep is still where it was, and a window
-// parked at a corner it touches would be in view when it wakes.
-CGRect wm_park_display(void) {
-    CGDirectDisplayID ds[8];
-    CGRect r[8];
-    uint32_t n = 0;
-    CGGetOnlineDisplayList(8, ds, &n);
-    for (uint32_t k = 0; k < n; k++) r[k] = CGDisplayBounds(ds[k]);
-    return n ? shown_park_display(r, n) : CGDisplayBounds(CGMainDisplayID());
-}
-
 // Whether wid is really shown: in that list, not transparent, and with a visible part on a display (so not
 // a hidden app's window, one on another Space, alpha 0 or off screen). True when the list is unavailable.
 static bool is_shown(CFArrayRef shown, const displays_t *ds, uint32_t wid) {
@@ -104,38 +93,6 @@ static bool is_shown(CFArrayRef shown, const displays_t *ds, uint32_t wid) {
         return shown_visible(alpha, r, ds->r, ds->n);
     }
     return false;
-}
-
-bool wm_in_place(double since) {
-    const void **ids = malloc(sizeof *ids * (nwins ? nwins : 1));
-    if (!ids) return true;
-    CFIndex n = 0;
-    for (int i = 0; i < nwins; i++) {
-        const win_t *w = &wins[i];
-        bool came = wm_here(w) && !w->hidden && w->shown_at >= since;
-        bool went = w->hidden && w->parked_at >= since;
-        // The array holds the ids themselves, as pointer-sized values with no callbacks.
-        if ((came || went) && !w->minimized && !apps_hidden(w->pid)) ids[n++] = (const void *)(uintptr_t)w->wid;
-    }
-    CFArrayRef want = n ? CFArrayCreate(kCFAllocatorDefault, ids, n, NULL) : NULL;
-    free(ids);
-    CFArrayRef info = want ? CGWindowListCreateDescriptionFromArray(want) : NULL;
-    if (want) CFRelease(want);
-    if (!info) return true;
-    CGRect park = wm_park_display();
-    bool ok = true;
-    for (CFIndex i = 0; ok && i < CFArrayGetCount(info); i++) {
-        CFDictionaryRef d = CFArrayGetValueAtIndex(info, i);
-        CFNumberRef num = CFDictionaryGetValue(d, kCGWindowNumber);
-        CFDictionaryRef b = CFDictionaryGetValue(d, kCGWindowBounds);
-        CGRect r;
-        int64_t id = 0;
-        if (!num || !b || !CFNumberGetValue(num, kCFNumberSInt64Type, &id) || !CGRectMakeWithDictionaryRepresentation(b, &r)) continue;
-        const win_t *w = wm_find_win((uint32_t)id);
-        if (w) ok = shown_is_parked(r.origin, park) == w->hidden;
-    }
-    CFRelease(info);
-    return ok;
 }
 
 // On this desktop, not minimized or parked.

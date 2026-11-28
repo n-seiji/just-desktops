@@ -14,7 +14,7 @@
 
 // The apps and windows the manager knows, kept in step with Accessibility notifications. Workspaces
 // are emulated like AeroSpace does: windows of inactive workspaces are parked at the bottom-right
-// corner of the display furthest right, so macOS Spaces / SIP are never touched (see wm_focus.c).
+// corner of the display furthest right, so macOS Spaces / SIP are never touched (see wm_park.c).
 
 win_t *wins;
 int nwins;

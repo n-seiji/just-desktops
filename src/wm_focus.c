@@ -13,7 +13,6 @@
 #include <dispatch/dispatch.h>
 #include <os/log.h>
 #include <stdio.h>
-#include <stdlib.h>
 
 // Parking, switching and focus. A window of an inactive desktop sits at the bottom-right corner of
 // the display furthest right (see shown_park_display); a desktop switch parks one set and unparks another with
@@ -31,7 +30,6 @@ static hist_t hist = {.at = -1};
 static double hold_until; // until then, only the window wm_history went to is recorded; 0 when recording
 static bool hold_switcher; // ⌥Tab is stepping through windows: they are not recorded
 static const char *trigger = "start"; // what led to the current wm_on_focus, for the log
-static bool shutting_down; // wm_restore_all is running: no Accessibility call may wait long
 
 // After a desktop change macOS hands activation from one parked window's app to the next,
 // about a second apart; each one extends the quiet period (to SETTLE_MAX_S at most) in which a call for
@@ -54,55 +52,6 @@ void wm_settle_pid(pid_t pid) {
 }
 
 // ---- hide / show / focus ----
-
-// Some apps animate a move while AXEnhancedUserInterface is on (Chrome, once an assistive app such
-// as a password manager turns it on), so a parked window would slide into the corner on screen.
-// While quitting the toggle is skipped: it is three more calls to an app that may be hung, and a timed-out
-// restore of the flag would leave it off.
-static AXError move(win_t *w, CGPoint p) {
-    app_t *a = wm_find_app(w->pid);
-    bool eui = !shutting_down && a && ax_bool(a->el, CFSTR("AXEnhancedUserInterface"));
-    if (eui) AXUIElementSetAttributeValue(a->el, CFSTR("AXEnhancedUserInterface"), kCFBooleanFalse);
-    AXError err = ax_set_position(w->el, p);
-    if (eui) AXUIElementSetAttributeValue(a->el, CFSTR("AXEnhancedUserInterface"), kCFBooleanTrue);
-    return err;
-}
-
-// A window already in the corner is not moved again, and never becomes its own place to return to.
-void wm_hide(win_t *w) {
-    if (w->hidden) return;
-    CGPoint p;
-    if (!ax_value(w->el, kAXPositionAttribute, kAXValueTypeCGPoint, &p)) return;
-    CGRect b = wm_park_display();
-    w->saved = shown_return_point(p, b, CGDisplayBounds(CGMainDisplayID()), w->has_saved, w->saved, CFAbsoluteTimeGetCurrent() - w->shown_at);
-    w->has_saved = true;
-    if (!shown_is_parked(p, b)) {
-        if (move(w, shown_park_point(b)) == kAXErrorSuccess) w->parked_at = CFAbsoluteTimeGetCurrent();
-    }
-    w->hidden = true;
-}
-
-// macOS and apps adjust a position they are asked for (the park point ends up 41pt higher, or more), and may not
-// have applied it yet: read it back once and ask again if it is elsewhere. Not while quitting, with its
-// short budget.
-static void recheck_position(win_t *w) {
-    CGPoint got;
-    if (shutting_down || !ax_value(w->el, kAXPositionAttribute, kAXValueTypeCGPoint, &got)) return;
-    if (!shown_missed(w->saved, got)) return;
-    wm_log_reshow(w, w->saved, got);
-    move(w, w->saved);
-}
-
-// A window whose move failed counts as shown all the same: a busy app may still apply it late, and it must
-// then be parked again. One that stayed in the corner keeps its place the next time it is parked (wm_hide).
-AXError wm_show(win_t *w) {
-    if (!w->hidden) return kAXErrorSuccess;
-    AXError err = move(w, w->saved);
-    if (err == kAXErrorSuccess) recheck_position(w);
-    w->hidden = false;
-    w->shown_at = CFAbsoluteTimeGetCurrent();
-    return err;
-}
 
 // False when the app did not answer: it is hung, and the focus stays where it was. Other errors are not
 // counted: some apps report one for a window they focus all the same.
@@ -547,34 +496,6 @@ void wm_switch(int ws) {
     }
 }
 
-// The app of window i did not answer: its later windows are skipped, or each would wait out its own timeout.
-static void skip_rest_of_app(bool *hung, int i) {
-    for (int j = i + 1; j < nwins; j++)
-        if (wins[j].pid == wins[i].pid) hung[j] = true;
-}
-
-// The displays changed, so the park corner may have moved: parked windows go to the new one. Their
-// places to return to are kept.
-// It also runs when nothing moved (a wake, another display's resolution), so a window still in the corner is
-// left alone, and an app that timed out is not asked again: each call can block for a second.
-void wm_displays_changed(void) {
-    if (shutting_down) return;
-    CGRect d = wm_park_display();
-    int n = 0;
-    bool *hung = calloc(nwins + 1, 1);
-    for (int i = 0; i < nwins; i++) {
-        win_t *w = &wins[i];
-        CGPoint p;
-        if (!w->hidden || (hung && hung[i])) continue;
-        if (ax_value(w->el, kAXPositionAttribute, kAXValueTypeCGPoint, &p) && shown_is_parked(p, d)) continue;
-        AXError err = move(w, shown_park_point(d));
-        if (err == kAXErrorSuccess) n++;
-        if (err == kAXErrorCannotComplete && hung) skip_rest_of_app(hung, i);
-    }
-    free(hung);
-    if (n) wm_log_repark(n);
-}
-
 void wm_dismiss_every(void) {
     pid_t pid = apps_frontmost();
     if (!every_app(pid)) return;
@@ -659,27 +580,4 @@ void wm_history(int dir) {
     } else {
         wm_focus_wid(wid);
     }
-}
-
-// The way out: a hung app must not hold up quitting or logging out, so the whole walk has a deadline
-// and every Accessibility call a short timeout.
-#define RESTORE_S 2.5
-#define RESTORE_AX_S 0.25
-
-void wm_restore_all(void) {
-    shutting_down = true;
-    wm_hold_drop();
-    double end = CFAbsoluteTimeGetCurrent() + RESTORE_S;
-    bool *hung = calloc(nwins + 1, 1); // per window: its app already timed out, so the rest of its windows are left
-    for (int i = 0; i < nwins; i++) {
-        win_t *w = &wins[i];
-        if (!w->hidden || (hung && hung[i])) continue;
-        if (CFAbsoluteTimeGetCurrent() >= end) break;
-        if (!apps_alive(w->pid)) continue;
-        app_t *a = wm_find_app(w->pid);
-        if (a) AXUIElementSetMessagingTimeout(a->el, RESTORE_AX_S);
-        AXUIElementSetMessagingTimeout(w->el, RESTORE_AX_S);
-        if (wm_show(w) == kAXErrorCannotComplete && hung) skip_rest_of_app(hung, i);
-    }
-    free(hung);
 }
