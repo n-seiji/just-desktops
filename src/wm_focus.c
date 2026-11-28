@@ -248,15 +248,14 @@ static void follow_check_now(uint32_t wid, const char *why, bool user_call) {
     }
 }
 
-static double last_click_ago(void);
-
 // A window clicked in Mission Control is a call with no doubt about it, and Mission Control is zooming back out
 // to the old desktop: the switch goes at once, so that the zoom lands on the new one. Without a click just
 // before, the focus may be macOS's doing (an app quit or closed a window while Mission Control was up): it waits.
 static void follow_later(uint32_t wid, bool user_call) {
     unsigned gen = ++follow_gen;
     const char *why = trigger;
-    if (last_click_ago() < CALL_INPUT_S && wm_mission_control_up()) {
+    double now = CFAbsoluteTimeGetCurrent();
+    if (follow_at_once(hotkey_last_click(), now, wm_mission_control_up())) {
         follow_check_now(wid, why, user_call);
         return;
     }
@@ -265,23 +264,15 @@ static void follow_later(uint32_t wid, bool user_call) {
     });
 }
 
-// Seconds since the last left or right mouse click.
-static double last_click_ago(void) {
-    double click = CGEventSourceSecondsSinceLastEventType(kCGEventSourceStateHIDSystemState, kCGEventLeftMouseDown);
-    double rclick = CGEventSourceSecondsSinceLastEventType(kCGEventSourceStateHIDSystemState, kCGEventRightMouseDown);
-    return rclick < click ? rclick : click;
-}
-
 // A mouse click, Return / Enter or a shortcut (Cmd-Tab, an app's own key) just before now, after the quiet period began: the user called this window.
 static bool called_by_user(double now) {
-    double at = now - last_click_ago(), key = hotkey_last_call_key();
+    double at = hotkey_last_click(), key = hotkey_last_call_key();
     return input_is_call(at > key ? at : key, settle_start, now);
 }
 
 // A shortcut other than close, quit, minimize or hide just before now, with no click since: switch without waiting.
 static bool quick_call(double now) {
-    double click_at = now - last_click_ago();
-    return input_is_quick_call(hotkey_last_quick_key(), click_at, now);
+    return input_is_quick_call(hotkey_last_quick_key(), hotkey_last_click(), now);
 }
 
 static void on_focus(bool recheck) {

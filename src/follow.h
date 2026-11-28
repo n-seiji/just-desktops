@@ -23,6 +23,10 @@ bool input_is_call(double at, double settle_start, double now);
 #define QUICK_CALL_S 1.0
 bool input_is_quick_call(double key_at, double click_at, double now);
 
+// Whether a focus change is a window clicked in Mission Control, to be acted on without the FOLLOW_DELAY_S wait:
+// Mission Control is up and the click at click_at (0 if none) was at most CALL_INPUT_S before now.
+bool follow_at_once(double click_at, double now, bool mission_control_up);
+
 typedef enum {
     FOLLOW_DROP,   // the call is over or handled elsewhere: do nothing
     FOLLOW_WAIT,   // a quiet period started meanwhile: the focus is dealt with when it ends
