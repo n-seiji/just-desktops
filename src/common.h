@@ -1,8 +1,9 @@
 #pragma once
-// The version, the limits, WS_EVERY and sw_entry_t, shared across modules.
+// The version, the limits, WS_EVERY, sw_entry_t and sw_free_entries, shared across modules.
 #include <ApplicationServices/ApplicationServices.h>
 #include <stdbool.h>
 #include <stdint.h>
+#include <stdlib.h>
 
 #define JD_VERSION "0.1.10"
 #define JD_MAX_WS 10 // most desktops `keys` can bind
@@ -18,3 +19,13 @@ typedef struct {
     CFStringRef app, title;
     bool nopreview; // never capture this window (password managers)
 } sw_entry_t;
+
+// Releases the entries wm_windows or wm_overflow returned.
+static inline void sw_free_entries(sw_entry_t *ents, int n) {
+    for (int i = 0; i < n; i++) {
+        CGImageRelease(ents[i].icon);
+        if (ents[i].app) CFRelease(ents[i].app);
+        if (ents[i].title) CFRelease(ents[i].title);
+    }
+    free(ents);
+}

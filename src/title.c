@@ -61,3 +61,28 @@ void title_labels(CFStringRef app, const CFStringRef *titles, int n, CFStringRef
         }
     }
 }
+
+void title_label_all(const CFStringRef *apps, CFStringRef *titles, int n) {
+    int *at = malloc(sizeof *at * n);
+    CFStringRef *group = malloc(sizeof *group * n * 2), *labels = group + n;
+    if (at && group) {
+        for (int i = 0; i < n; i++) {
+            bool first = apps[i] != NULL;
+            for (int j = 0; j < i && first; j++) first = !apps[j] || !CFEqual(apps[j], apps[i]);
+            if (!first) continue;
+            int k = 0;
+            for (int j = i; j < n; j++) {
+                if (!apps[j] || !CFEqual(apps[j], apps[i])) continue;
+                at[k] = j;
+                group[k++] = titles[j];
+            }
+            title_labels(apps[i], group, k, labels);
+            for (int m = 0; m < k; m++) {
+                if (titles[at[m]]) CFRelease(titles[at[m]]);
+                titles[at[m]] = labels[m];
+            }
+        }
+    }
+    free(at);
+    free(group);
+}

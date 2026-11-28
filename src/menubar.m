@@ -151,7 +151,6 @@ static void draw_app(CGContextRef c, CGRect slot, CGImageRef mask, bool focused)
 static void render(void) {
     int slots = strip_slots(last_n, last_over);
     int width = strip_width(reserve);
-    int left = width - strip_width(slots); // the strip is right-aligned
     CGColorSpaceRef cs = CGColorSpaceCreateDeviceRGB();
     CGContextRef c = CGBitmapContextCreate(NULL, width * SCALE, HEIGHT * SCALE, 8, 0, cs,
                                            (CGBitmapInfo)kCGImageAlphaPremultipliedLast);
@@ -163,11 +162,11 @@ static void render(void) {
     CGContextSetGrayStrokeColor(c, 1, 1);
 
     for (int i = 0; i < last_n; i++) {
-        CGRect slot = CGRectMake(left + i * (STRIP_SLOT + STRIP_GAP), (HEIGHT - STRIP_SLOT) / 2.0, STRIP_SLOT, STRIP_SLOT);
+        CGRect slot = CGRectMake(strip_image_slot_x(reserve, last_n, last_over, i), (HEIGHT - STRIP_SLOT) / 2.0, STRIP_SLOT, STRIP_SLOT);
         draw_app(c, slot, menubar_mask(last_pids[i]), last_wids[i] == last_front);
     }
-    if (last_over > 0) draw_more(c, left + last_n * (STRIP_SLOT + STRIP_GAP), last_over);
-    draw_key(c, left + slots * (STRIP_SLOT + STRIP_GAP), config_key_char(last_ws - 1));
+    if (last_over > 0) draw_more(c, strip_image_slot_x(reserve, last_n, last_over, last_n), last_over);
+    draw_key(c, strip_image_slot_x(reserve, last_n, last_over, slots), config_key_char(last_ws - 1));
 
     CGImageRef strip = CGBitmapContextCreateImage(c);
     CGContextRelease(c);

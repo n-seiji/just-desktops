@@ -67,6 +67,23 @@ int main(void) {
     // Without overflow the slot after the glyphs is the key box (2 glyphs: content 68pt, starts at 82).
     hit("key box is not +k", 140, 160, 5, 2, 0, -1, false);
 
+    // strip_image_slot_x against the arithmetic menubar.m had: left = width - strip_width(slots), then
+    // left + i * (STRIP_SLOT + STRIP_GAP). Button coordinates (strip_overflow_left) are the image's offset
+    // in the button, (button_w - width) / 2, plus the same number.
+    for (int reserve = 0; reserve <= 14; reserve++)
+        for (int n = 0; n <= 12; n++)
+            for (int over = 0; over <= 3; over++) {
+                int slots = strip_slots(n, over);
+                int left = strip_width(reserve) - strip_width(slots);
+                for (int i = 0; i <= slots; i++)
+                    eq("strip_image_slot_x", strip_image_slot_x(reserve, n, over, i), left + i * (STRIP_SLOT + STRIP_GAP));
+                if (over > 0)
+                    for (double bw = 120; bw <= 260; bw += 20)
+                        eq("overflow in both coordinate systems", strip_overflow_left(bw, reserve, n, over),
+                           (bw - strip_width(reserve)) / 2 + strip_image_slot_x(reserve, n, over, n));
+            }
+    eq("strip_image_slot_x: first slot, 1 glyph in 5", strip_image_slot_x(5, 1, 0, 0), 96);
+
     puts(failed ? "FAILED" : "ok");
     return failed != 0;
 }

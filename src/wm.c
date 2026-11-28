@@ -49,6 +49,20 @@ win_t *wm_find_win(uint32_t wid) {
     return NULL;
 }
 
+// The tracked window with this element, or -1.
+static int win_index(AXUIElementRef el) {
+    for (int i = 0; i < nwins; i++)
+        if (CFEqual(wins[i].el, el)) return i;
+    return -1;
+}
+
+// Stops listening to an app's observer and releases it with the app's element.
+static void drop_observer(AXObserverRef obs, AXUIElementRef el) {
+    CFRunLoopRemoveSource(CFRunLoopGetMain(), AXObserverGetRunLoopSource(obs), kCFRunLoopDefaultMode);
+    CFRelease(obs);
+    CFRelease(el);
+}
+
 static void remove_win_at(int i) {
     CFRelease(wins[i].el);
     memmove(&wins[i], &wins[i + 1], sizeof *wins * (--nwins - i)); // keep order: cycling relies on it
@@ -216,9 +230,7 @@ static void add_app(pid_t pid, int assign, bool nopreview, int attempt) {
         int cap = capapps ? capapps * 2 : 32;
         app_t *n = realloc(apps, sizeof *apps * cap);
         if (!n) {
-            CFRunLoopRemoveSource(CFRunLoopGetMain(), AXObserverGetRunLoopSource(obs), kCFRunLoopDefaultMode);
-            CFRelease(obs);
-            CFRelease(el);
+            drop_observer(obs, el);
             return;
         }
         apps = n;
@@ -257,9 +269,7 @@ void wm_remove_app(pid_t pid) {
         if (wins[i].pid == pid) remove_win_at(i);
     for (int i = 0; i < napps; i++) {
         if (apps[i].pid != pid) continue;
-        CFRunLoopRemoveSource(CFRunLoopGetMain(), AXObserverGetRunLoopSource(apps[i].obs), kCFRunLoopDefaultMode);
-        CFRelease(apps[i].obs);
-        CFRelease(apps[i].el);
+        drop_observer(apps[i].obs, apps[i].el);
         apps[i] = apps[--napps];
         return;
     }
@@ -275,24 +285,22 @@ static void ax_cb(AXObserverRef obs, AXUIElementRef el, CFStringRef n, void *ctx
         wm_on_focus();
     } else if (CFEqual(n, kAXUIElementDestroyedNotification)) {
         wm_set_trigger("ax-destroyed");
-        for (int i = 0; i < nwins; i++)
-            if (CFEqual(wins[i].el, el)) {
-                if (wm_here(&wins[i])) wm_settle();
-                remove_win_at(i);
-                break;
-            }
+        int i = win_index(el);
+        if (i >= 0) {
+            if (wm_here(&wins[i])) wm_settle();
+            remove_win_at(i);
+        }
         wm_on_focus();
     } else if (CFEqual(n, kAXFocusedWindowChangedNotification) || CFEqual(n, kAXMainWindowChangedNotification)) {
         wm_set_trigger("ax-focus");
         wm_on_focus();
     } else {
         bool mini = CFEqual(n, kAXWindowMiniaturizedNotification);
-        for (int i = 0; i < nwins; i++)
-            if (CFEqual(wins[i].el, el)) {
-                wins[i].minimized = mini;
-                if (mini && wm_here(&wins[i])) wm_settle();
-                break;
-            }
+        int i = win_index(el);
+        if (i >= 0) {
+            wins[i].minimized = mini;
+            if (mini && wm_here(&wins[i])) wm_settle();
+        }
         wm_refresh_ui();
     }
 }

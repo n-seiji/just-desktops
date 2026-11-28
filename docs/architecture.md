@@ -22,7 +22,7 @@ just-desktops is one process on the main run loop. It emulates desktops by movin
 | `menubar.m` | The status item: strip drawing, click handling. |
 | `menubar_glyph.m`, `menubar_overflow.m`, `menubar_menu.m` | App glyph masks, the "+k" panel, the right-click menu. |
 
-Pure logic, with a unit test each in `tests/`: `select.c` (selection stepping), `keyrules.c` (modifier match, repeat throttle, which keys call a window), `strip.c` (strip geometry and hit test), `order.c` (menu bar order and overflow split), `membership.c` (the saved desktops file: format, parse, pins), `shown.c` (visibility, grace period, parking point), `follow.c` (what to do when a window gets focus), `hist.c` (focus history for ⌥[ ⌥]), `cardmath.c` (easing, card layout and the list highlight's slide), `border_geom.c` (ring rects), `glyph.c` (icon to mask), `title.c` (row text).
+Pure logic, with a unit test each in `tests/`: `select.c` (selection stepping), `keyrules.c` (modifier match, repeat throttle, which keys call a window), `strip.c` (strip geometry: slot positions in the image and in the button, hit test), `order.c` (menu bar order and overflow split), `membership.c` (the saved desktops file: format, parse, pins), `shown.c` (visibility, grace period, parking point), `follow.c` (what to do when a window gets focus), `hist.c` (focus history for ⌥[ ⌥]), `cardmath.c` (easing, card layout and the list highlight's slide), `border_geom.c` (ring rects), `glyph.c` (icon to mask), `title.c` (row text, and which windows of one app get numbered).
 
 Headers: one per module, and `common.h` for the limits and `sw_entry_t` several modules share. `wm_priv.h` and `menubar_priv.h` are for the files of that module only.
 

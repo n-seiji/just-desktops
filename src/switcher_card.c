@@ -216,7 +216,7 @@ static void place(card_t *k, double p) {
 
 static void release_card(card_t *k) {
     sw_close_window(cid, &k->wid, &k->ctx);
-    if (k->img) CGImageRelease(k->img);
+    CGImageRelease(k->img);
     *k = (card_t){0};
 }
 
@@ -281,7 +281,7 @@ static void settle(bool animate) {
         for (int j = 0; j < m && k->used && !keep; j++) keep = need[j] == k->v;
         if (k->used && !keep) {
             k->used = false;
-            if (k->wid) SLSSetWindowAlpha(cid, k->wid, 0);
+            SLSSetWindowAlpha(cid, k->wid, 0);
         }
     }
     for (int j = 0; j < m; j++) {
@@ -296,7 +296,7 @@ static void settle(bool animate) {
         if (!k->used) continue;
         k->to = k->v - sel_v;
         if (!animate) k->from = k->to;
-        if (k->wid) SLSOrderWindow(cid, k->wid, 1, stage);
+        SLSOrderWindow(cid, k->wid, 1, stage);
     }
 }
 

@@ -26,3 +26,6 @@ typedef struct {
 strip_hit_t strip_hit(double x, double button_w, int reserve, int n, int over);
 // Left edge of the "+k" slot in button coordinates.
 double strip_overflow_left(double button_w, int reserve, int n, int over);
+// Left edge of slot i (the "+k" slot is i == n, the key box i == strip_slots) in image coordinates: from
+// the left edge of the item's image, with the strip right-aligned in it.
+int strip_image_slot_x(int reserve, int n, int over, int i);

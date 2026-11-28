@@ -184,15 +184,6 @@ uint32_t sw_window(int cid, CGPoint at, CGSize sz, CGFloat radius, double res, C
     return w;
 }
 
-void sw_free_entries(sw_entry_t *ents, int n) {
-    for (int i = 0; i < n; i++) {
-        if (ents[i].icon) CGImageRelease(ents[i].icon);
-        if (ents[i].app) CFRelease(ents[i].app);
-        if (ents[i].title) CFRelease(ents[i].title);
-    }
-    free(ents);
-}
-
 void sw_drop_entries(sw_entry_t **ents, int *n) {
     sw_free_entries(*ents, *n);
     *ents = NULL;

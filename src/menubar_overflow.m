@@ -1,7 +1,6 @@
 #import <AppKit/AppKit.h>
 #include "menubar_priv.h"
 #include "select.h"
-#include "swkit.h"
 #include "wm.h"
 
 // The "+k" panel: one row per hidden window (icon, title) under a small arrow that points at
