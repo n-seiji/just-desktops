@@ -155,51 +155,6 @@ static void log_hide(pid_t pid) {
     os_log(ws_log(), "app=%{public}s reason=hide trigger=%{public}s cur=%d", app, trigger, cur_ws);
 }
 
-// ---- ui ----
-
-static uint32_t ring_wid; // the window the ring is on, 0 when it is hidden
-
-// A panel of an app we do not track has focus (Raycast, Spotlight: accessory apps), floating over the windows here.
-static bool panel_focused(void) {
-    pid_t pid = apps_frontmost();
-    return pid > 0 && !wm_find_app(pid);
-}
-
-// w is the focused window, looked up once by the caller: each lookup is a round trip to the app.
-// While a panel has focus the ring stays on its window, unless that window is gone, parked or minimized.
-static void refresh_border(win_t *w) {
-    if (!config_border()) return;
-    if (!w && panel_focused()) w = wm_find_win(ring_wid);
-    CGPoint p;
-    CGSize s;
-    if (!w || w->hidden || !wm_here(w) || apps_hidden(w->pid) ||
-        w->minimized || ax_bool(w->el, CFSTR("AXFullScreen")) ||
-        !ax_value(w->el, kAXPositionAttribute, kAXValueTypeCGPoint, &p) ||
-        !ax_value(w->el, kAXSizeAttribute, kAXValueTypeCGSize, &s)) {
-        border_hide();
-        ring_wid = 0;
-        return;
-    }
-    border_show((CGRect){p, s}, w->wid);
-    ring_wid = w->wid;
-}
-
-void wm_refresh_ui(void) {
-    if (!config_border() && !menubar_ready()) return;
-    wm_ui_draw(wm_focused());
-}
-
-// The ring and the menu bar for w, which the caller looked up once: see refresh_border.
-void wm_ui_draw(win_t *w) {
-    refresh_border(w);
-    wm_refresh_menubar(w);
-}
-
-// The menu bar for the focused window. Not asked before it is up: the focus query is a round trip.
-void wm_ui_menubar_now(void) {
-    if (menubar_ready()) wm_refresh_menubar(wm_focused());
-}
-
 // ---- focus and desktop changes ----
 
 // While settling, a parked window that takes focus is left alone, so nothing would look at it again once the
@@ -374,12 +329,6 @@ static void on_focus(bool recheck) {
 }
 
 void wm_on_focus(void) { on_focus(false); }
-
-// WindowServer may not list the windows just shown or focused as on screen yet: check again once it does.
-void wm_refresh_menubar_later(void) {
-    if (!menubar_ready()) return;
-    run_after(FRESH_S + 0.05, ^{ wm_refresh_menubar(wm_focused()); });
-}
 
 // A `none` app with a tracked window. Keyed on the app, not the focused window: a panel such as a
 // quick terminal is never tracked.

@@ -12,14 +12,6 @@
 
 // The windows of the current desktop as the switchers and the menu bar list them.
 
-static double fresh_until; // until then, the menu bar prefers the window we just focused...
-static uint32_t fresh_wid; // ...to the one macOS reports as focused, which lags behind
-
-void wm_mark_fresh(uint32_t wid, double now) {
-    fresh_until = now + FRESH_S;
-    fresh_wid = wid;
-}
-
 // Replaces each entry's title with its row text: see title_label_all.
 static void label_entries(sw_entry_t *list, int n) {
     CFStringRef *names = malloc(sizeof *names * n * 2), *titles = names + n;
@@ -224,18 +216,6 @@ void wm_menubar_rows(pid_t *pids, uint32_t *wids, int *shown_n, int *over, uint3
     int n = menubar_order(pids, wids);
     order_split(n, JD_MENUBAR_SLOTS, shown_n, over);
     *hash = order_hash(wids + *shown_n, *over);
-}
-
-void wm_refresh_menubar(win_t *f) {
-    if (!menubar_ready()) return; // apps_init runs before menubar_init: the first draw is wm_on_focus in main
-    double now = CFAbsoluteTimeGetCurrent();
-    uint32_t front = shown_front(now, fresh_until, fresh_wid, f ? f->wid : 0);
-    pid_t pids[JD_MENUBAR_WINS];
-    uint32_t wids[JD_MENUBAR_WINS];
-    int shown_n, over;
-    uint32_t hash;
-    wm_menubar_rows(pids, wids, &shown_n, &over, &hash);
-    menubar_update(cur_ws, pids, wids, shown_n, over, hash, front);
 }
 
 // The windows behind the menu bar's "+k" slot, in menu bar order, with +1 icon/app/title

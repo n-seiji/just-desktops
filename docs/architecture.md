@@ -11,8 +11,9 @@ just-desktops is one process on the main run loop. It emulates desktops by movin
 | `config.c`, `config_write.c` | Read the config file once; write one key back for the app's settings menu. |
 | `apps.m` | NSWorkspace launch, quit, activate and hide events; the unlock notification; app names and icons; hiding apps. |
 | `wm.c` | The apps and windows we track, and the Accessibility notifications that update them. |
-| `wm_focus.c` | Switch desktops and hold the screen, move a window to another desktop, follow a parked window that gets focus, the focus history, the `ws` log, the border and menu bar redraw. |
+| `wm_focus.c` | Switch desktops and hold the screen, move a window to another desktop, follow a parked window that gets focus, the focus history, the `ws` log. |
 | `wm_park.c` | Park and unpark one window, the corner display, checking WindowServer has the moves, putting every window back on the way out. |
+| `wm_ui.c` | Redraw the focus ring and the menu bar for the focused window. |
 | `wm_list.c` | The window lists the switchers and the menu bar draw from. |
 | `ax.c` | Typed reads of Accessibility attributes. |
 | `hotkey.c` | The keyboard event tap: desktop keys, ⌥[ ⌥], ⌥Tab, Esc. |
