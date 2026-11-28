@@ -48,7 +48,7 @@ A journey with a **Seen** line was run, on macOS 27.2 with `switcher = off` and 
 
 - **Reach.** Hold `⌥`, press Tab, press Esc, release `⌥`.
 - **Drive.** Run `jd-drive probe` for the swallow rule. For the effect, record while pressing the keys by hand: `chord` cannot send Esc with the modifier held.
-- **Proof.** The panel closes and the focus stays on the first window. In the probe table, `esc-armed` is `swallow` and `esc-not-armed` is `pass`.
+- **Proof.** The panel closes and the focus stays on the first window. With `switcher = off` there is no panel and the focus has already moved on the Tab. In the probe table, `esc-armed` is `swallow` and `esc-not-armed` is `pass`.
 
 ## Go back and forward with ⌥[ and ⌥]
 
@@ -68,8 +68,9 @@ A journey with a **Seen** line was run, on macOS 27.2 with `switcher = off` and 
 
 - **Reach.** Press the combinations the tap lets through.
 - **Drive.** `jd-drive probe`, with just-desktops running and the default `modifier` and `keys`.
-- **Proof.** The table is the proof. Record it before and after a change and `diff` the two. With the current tap it should read `cmd-opt-1 pass`, `ctrl-opt-tab pass`, `opt-shift-lbracket pass`, `esc-not-armed pass`, `opt-1-autorepeat swallow`, `opt-tab swallow`, `opt-shift-tab swallow`, `esc-armed swallow`, `opt-lbracket swallow`, `opt-rbracket swallow`.
-- **Seen.** That table, the same in three runs.
+- **Proof.** The table is the proof. Record it before and after a change and `diff` the two. With the current tap it should read `cmd-opt-1 pass`, `ctrl-opt-tab pass`, `opt-shift-lbracket pass`, `esc-not-armed pass`, `opt-1-autorepeat swallow`, `opt-shift-1-autorepeat swallow`, `opt-a pass`, `opt-tab swallow`, `opt-shift-tab swallow`, `esc-armed swallow`, `opt-tab-again swallow`, `esc-after-release pass`, `opt-lbracket swallow`, `opt-rbracket swallow`. `esc-after-release` reads `swallow` if releasing `⌥` no longer commits.
+- **Seen.** The ten rows other than `opt-shift-1-autorepeat`, `opt-a`, `opt-tab-again` and `esc-after-release`, the same in three runs. Those four are read from `src/hotkey.c`.
+- **Gotchas.** The table cannot see the call and quick-key timestamps, the Tab repeat throttle, or whether a repeat starts a switch: both ways the key is swallowed. With `switcher = list` or `square` the panel flashes during the held rows.
 - **Gotchas.** A tap that is off (disabled by timeout) cannot be driven, and neither can the missed-release path in it.
 
 ## Hotkeys that do nothing
@@ -96,7 +97,7 @@ A journey with a **Seen** line was run, on macOS 27.2 with `switcher = off` and 
 
 - **Reach.** `⌘N`, `⌘W`, `⌘M`, open an app, quit an app, each on a desktop other than 1.
 - **Drive.** `jd-drive key 19`, then `osascript -e 'tell application "System Events" to keystroke "n" using command down'` in TextEdit, `... keystroke "m" using command down`, `... keystroke "w" using command down`, `open -a TextEdit`, `osascript -e 'quit app "TextEdit"'`. System Events needs the terminal's Automation grant.
-- **Proof.** A new window gets `reason=track` with `ws` the current desktop. A close, minimize or quit starts a quiet period and the focus afterwards logs `reason=refocus` or `left`, not `follow`: the user stays on the desktop. The `⌘W`, `⌘Q`, `⌘M` keys are the ones that do not take the quick path (see `keyrules_is_quick_key`).
+- **Proof.** A new window gets `reason=track` with `ws` the current desktop. A close, minimize or quit starts a quiet period and the focus afterwards logs `reason=refocus` or `left`, not `follow`: the user stays on the desktop. The `⌘W`, `⌘Q`, `⌘M` and `⌘H` keys are the ones that do not take the quick path (see `keyrules_is_quick_key`).
 - **Gotchas.** Whether the quiet period was entered shows only as `settling=1` on the next line, so read that field.
 
 ## An app set to `none`
@@ -107,7 +108,7 @@ A journey with a **Seen** line was run, on macOS 27.2 with `switcher = off` and 
 
 ## Not driven automatically
 
-- A `reason=call` line. A posted click does not count as input for just-desktops, so only a real click or key produces it. Ask the user.
+- A `reason=call` line from a click. A posted click does not count as input for just-desktops. A posted key does reach the tap, but no journey here produces `call` with one yet. Ask the user to click.
 - A display being added, removed or rearranged (`repark`). It needs hardware or System Settings.
 - An app that has hung. Accessibility calls to it time out, and a test app that hangs on purpose is not in this repo.
 - The tap being disabled by the system, and a `⌥` release missed in that time.

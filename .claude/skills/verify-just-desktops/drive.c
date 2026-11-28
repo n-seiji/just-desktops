@@ -22,6 +22,7 @@
 #define KEY_LBRACKET 0x21
 #define KEY_RBRACKET 0x1E
 #define KEY_ONE 18
+#define KEY_A 0
 
 static volatile sig_atomic_t stop;
 
@@ -195,16 +196,21 @@ static const row_t rows[] = {
     {"opt-shift-lbracket", OPT | SHIFT, KEY_LBRACKET, false, false},
     {"esc-not-armed", 0, KEY_ESC, false, false},
     {"opt-1-autorepeat", OPT, KEY_ONE, true, false},
+    {"opt-shift-1-autorepeat", OPT | SHIFT, KEY_ONE, true, false},
+    {"opt-a", OPT, KEY_A, false, false},
     {"opt-tab", OPT, KEY_TAB, false, true},
     {"opt-shift-tab", OPT | SHIFT, KEY_TAB, false, true},
     {"esc-armed", OPT, KEY_ESC, false, true},
+    // Releasing the modifier commits, so this Esc must find no switcher armed.
+    {"opt-tab-again", OPT, KEY_TAB, false, true},
+    {"esc-after-release", 0, KEY_ESC, false, false},
     {"opt-lbracket", OPT, KEY_LBRACKET, false, false},
     {"opt-rbracket", OPT, KEY_RBRACKET, false, false},
 };
 #define ROWS ((int)(sizeof rows / sizeof rows[0]))
 
 static CFMachPortRef probe_tap;
-static volatile bool seen[ROWS];
+static bool seen[ROWS];
 
 static CGEventRef on_probe(CGEventTapProxy proxy, CGEventType type, CGEventRef ev, void *ctx) {
     (void)proxy; (void)ctx;
