@@ -39,9 +39,13 @@ win_t *wm_focused(void); // the window macOS reports as focused, tracked now if 
 
 // wm_focus.c: parking, focus and the border
 void wm_hide(win_t *w);
+AXError wm_show(win_t *w); // moves it back to its place; the error of the move
+void wm_hold_drop(void); // the way out: let the screen go and cancel the polls waiting on the hold
 void wm_log_ws(const win_t *w, int old, const char *reason); // os_log a desktop change (old -1: first tracked)
 void wm_log_recover(const win_t *w); // os_log a window found parked by a previous run
 void wm_log_rescan(int n); // os_log the look after an unlock, with the number of windows it added
+void wm_log_repark(int n); // os_log n parked windows sent to the new corner
+void wm_log_reshow(const win_t *w, CGPoint want, CGPoint got); // os_log an unparked window that was not where it was sent
 
 // wm_list.c: the display windows are parked at the corner of (see shown_park_display); the main display if none is listed
 CGRect wm_park_display(void);

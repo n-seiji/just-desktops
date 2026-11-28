@@ -82,8 +82,6 @@ void wm_hide(win_t *w) {
     w->hidden = true;
 }
 
-static void log_reshow(const win_t *w, CGPoint want, CGPoint got);
-
 // macOS and apps adjust a position they are asked for (the park point ends up 41pt higher, or more), and may not
 // have applied it yet: read it back once and ask again if it is elsewhere. Not while quitting, with its
 // short budget.
@@ -91,13 +89,13 @@ static void recheck_position(win_t *w) {
     CGPoint got;
     if (shutting_down || !ax_value(w->el, kAXPositionAttribute, kAXValueTypeCGPoint, &got)) return;
     if (!shown_missed(w->saved, got)) return;
-    log_reshow(w, w->saved, got);
+    wm_log_reshow(w, w->saved, got);
     move(w, w->saved);
 }
 
 // A window whose move failed counts as shown all the same: a busy app may still apply it late, and it must
 // then be parked again. One that stayed in the corner keeps its place the next time it is parked (wm_hide).
-static AXError show(win_t *w) {
+AXError wm_show(win_t *w) {
     if (!w->hidden) return kAXErrorSuccess;
     AXError err = move(w, w->saved);
     if (err == kAXErrorSuccess) recheck_position(w);
@@ -175,6 +173,8 @@ void wm_log_recover(const win_t *w) {
 
 void wm_log_rescan(int n) { os_log(ws_log(), "reason=rescan trigger=unlock n=%d", n); }
 
+void wm_log_repark(int n) { os_log(ws_log(), "reason=repark n=%d", n); }
+
 // A parked window that was focused: the desktop it belongs to is unchanged, cur goes from cur_ws to `to`
 // (a refocus stays on cur_ws and prints it once).
 static void log_focus(const win_t *w, const char *reason, int to) {
@@ -190,7 +190,7 @@ static void log_focus(const win_t *w, const char *reason, int to) {
            w->wid, app, w->ws, reason, trigger, cur, settling, w->wid == stale, here, idle);
 }
 
-static void log_reshow(const win_t *w, CGPoint want, CGPoint got) {
+void wm_log_reshow(const win_t *w, CGPoint want, CGPoint got) {
     char app[128];
     app_name(w->pid, app, sizeof app);
     // parked=1: still in the corner, so the first move had not been applied; 0: it was put somewhere else.
@@ -483,6 +483,12 @@ static void release_screen(void) {
     SLSReenableUpdate(SLSMainConnectionID());
 }
 
+// The way out: a poll still queued for the hold is stale, and the screen must not stay held.
+void wm_hold_drop(void) {
+    hold_gen++;
+    release_screen();
+}
+
 static void release_if_busy(void) {
     if (holding && CFAbsoluteTimeGetCurrent() - held_since > HOLD_BUSY_S) release_screen();
 }
@@ -515,7 +521,7 @@ void wm_switch(int ws) {
     for (int i = 0; i < nwins; i++)
         if (wins[i].ws == ws) {
             release_if_busy();
-            show(&wins[i]);
+            wm_show(&wins[i]);
         }
     for (int i = 0; i < nwins; i++)
         if (wins[i].ws == old) {
@@ -566,7 +572,7 @@ void wm_displays_changed(void) {
         if (err == kAXErrorCannotComplete && hung) skip_rest_of_app(hung, i);
     }
     free(hung);
-    if (n) os_log(ws_log(), "reason=repark n=%d", n);
+    if (n) wm_log_repark(n);
 }
 
 void wm_dismiss_every(void) {
@@ -592,7 +598,7 @@ void wm_move_focused(int ws) {
         // A parked window that kept focus, moved to the desktop shown now: bring it here.
         follow_gen++;
         if (w->wid == stale) stale = 0;
-        show(w);
+        wm_show(w);
         wm_focus_wid(w->wid);
         return;
     }
@@ -662,8 +668,7 @@ void wm_history(int dir) {
 
 void wm_restore_all(void) {
     shutting_down = true;
-    hold_gen++;
-    release_screen();
+    wm_hold_drop();
     double end = CFAbsoluteTimeGetCurrent() + RESTORE_S;
     bool *hung = calloc(nwins + 1, 1); // per window: its app already timed out, so the rest of its windows are left
     for (int i = 0; i < nwins; i++) {
@@ -674,7 +679,7 @@ void wm_restore_all(void) {
         app_t *a = wm_find_app(w->pid);
         if (a) AXUIElementSetMessagingTimeout(a->el, RESTORE_AX_S);
         AXUIElementSetMessagingTimeout(w->el, RESTORE_AX_S);
-        if (show(w) == kAXErrorCannotComplete && hung) skip_rest_of_app(hung, i);
+        if (wm_show(w) == kAXErrorCannotComplete && hung) skip_rest_of_app(hung, i);
     }
     free(hung);
 }
