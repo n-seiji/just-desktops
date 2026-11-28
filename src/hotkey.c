@@ -108,9 +108,12 @@ static CGEventRef on_click(CGEventTapProxy proxy, CGEventType type, CGEventRef e
 static void add_click_tap(void) {
     click_tap = CGEventTapCreate(kCGSessionEventTap, kCGHeadInsertEventTap, kCGEventTapOptionListenOnly,
                                  CGEventMaskBit(kCGEventLeftMouseDown) | CGEventMaskBit(kCGEventRightMouseDown), on_click, NULL);
-    if (!click_tap) return;
+    if (!click_tap) {
+        fprintf(stderr, "just-desktops: could not create the click tap; clicks are timed by the system's 0.5 s counter\n");
+        return;
+    }
     CFRunLoopSourceRef src = CFMachPortCreateRunLoopSource(NULL, click_tap, 0);
-    CFRunLoopAddSource(CFRunLoopGetMain(), src, kCFRunLoopDefaultMode);
+    CFRunLoopAddSource(CFRunLoopGetMain(), src, kCFRunLoopCommonModes); // also while a menu bar menu is tracking
     CFRelease(src);
     CGEventTapEnable(click_tap, true);
 }
