@@ -18,9 +18,19 @@ static CGEventFlags base; // the configured base modifier
 static int64_t keys[JD_MAX_WS]; // the desktop keys, config_key(i) for each desktop
 static int nkeys;
 static key_state_t st;
+static CFMachPortRef click_tap;
+static double last_click;
 
 double hotkey_last_call_key(void) { return st.last_call_key; }
 double hotkey_last_quick_key(void) { return st.last_quick_key; }
+
+double hotkey_last_click(void) {
+    if (click_tap) return last_click;
+    double ago = CGEventSourceSecondsSinceLastEventType(kCGEventSourceStateHIDSystemState, kCGEventLeftMouseDown);
+    double rago = CGEventSourceSecondsSinceLastEventType(kCGEventSourceStateHIDSystemState, kCGEventRightMouseDown);
+    if (rago < ago) ago = rago;
+    return ago > 0 && ago < 1e9 ? CFAbsoluteTimeGetCurrent() - ago : 0;
+}
 
 static void apply(key_decision_t d) {
     if (d.cancel) dispatch_async(dispatch_get_main_queue(), ^{ switcher_cancel(); });
@@ -87,6 +97,24 @@ static CGEventRef on_key(CGEventTapProxy proxy, CGEventType type, CGEventRef ev,
     return d.swallow ? NULL : ev;
 }
 
+// Listen-only, so a main thread blocked in an Accessibility call never holds up a click.
+static CGEventRef on_click(CGEventTapProxy proxy, CGEventType type, CGEventRef ev, void *ctx) {
+    (void)proxy; (void)ctx;
+    if (type == kCGEventTapDisabledByTimeout || type == kCGEventTapDisabledByUserInput) CGEventTapEnable(click_tap, true);
+    else last_click = CFAbsoluteTimeGetCurrent();
+    return ev;
+}
+
+static void add_click_tap(void) {
+    click_tap = CGEventTapCreate(kCGSessionEventTap, kCGHeadInsertEventTap, kCGEventTapOptionListenOnly,
+                                 CGEventMaskBit(kCGEventLeftMouseDown) | CGEventMaskBit(kCGEventRightMouseDown), on_click, NULL);
+    if (!click_tap) return;
+    CFRunLoopSourceRef src = CFMachPortCreateRunLoopSource(NULL, click_tap, 0);
+    CFRunLoopAddSource(CFRunLoopGetMain(), src, kCFRunLoopDefaultMode);
+    CFRelease(src);
+    CGEventTapEnable(click_tap, true);
+}
+
 bool hotkey_init(void) {
     base = config_modifier();
     nkeys = config_workspaces();
@@ -98,5 +126,6 @@ bool hotkey_init(void) {
     CFRunLoopAddSource(CFRunLoopGetMain(), src, kCFRunLoopDefaultMode);
     CFRelease(src);
     CGEventTapEnable(tap, true);
+    add_click_tap();
     return true;
 }
