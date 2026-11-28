@@ -3,18 +3,19 @@
 #include "common.h"
 #include <dispatch/dispatch.h>
 
+// The comment on each field says who writes it after wm.c's track sets it up (grep it before adding a writer).
 typedef struct {
-    AXUIElementRef el;
-    pid_t pid;
-    uint32_t wid;
-    int ws;
-    CGPoint saved;
-    bool has_saved; // saved holds a place to return to
-    bool hidden;
-    double shown_at; // when show last unparked it
-    double parked_at; // when wm_hide last moved it to the corner
-    bool was_listed; // WindowServer listed it the last time we looked
-    bool minimized;  // kept from the (de)miniaturize notifications: asking a hung app costs a timeout per window
+    AXUIElementRef el; // set by track, released by remove_win_at, both in wm.c
+    pid_t pid; // set by track only
+    uint32_t wid; // set by track only
+    int ws; // set by track; wm_move_focused (wm_focus.c) changes it
+    CGPoint saved; // wm_hide (wm_park.c) and track
+    bool has_saved; // saved holds a place to return to; wm_hide and track
+    bool hidden; // wm_hide and wm_show (wm_park.c), and track for a window found in the corner
+    double shown_at; // when wm_show last unparked it; wm_show only
+    double parked_at; // when wm_hide last moved it to the corner; wm_hide only
+    bool was_listed; // WindowServer listed it the last time we looked; menubar_order in wm_list.c, through shown_grace
+    bool minimized;  // kept from the (de)miniaturize notifications: asking a hung app costs a timeout per window; track and ax_cb in wm.c
 } win_t;
 
 typedef struct {
