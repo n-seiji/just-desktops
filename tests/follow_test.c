@@ -123,6 +123,24 @@ int main(void) {
         printf("FAIL input_is_quick_call: %s = %d; want %d\n", q[i].what, got, q[i].want);
         failed++;
     }
+    static const struct {
+        const char *what;
+        double click_at, now;
+        bool mc_up, want;
+    } a[] = {
+        {"click just now in Mission Control", 100.5, 101, true, true},
+        {"click with Mission Control closed", 100.5, 101, false, false},
+        {"no click", 0, 101, true, false},
+        {"click too long ago", 100, 101.5, true, false},
+        {"click at the edge of the window", 100, 101, true, true},
+        {"click in the future", 102, 101, true, false},
+    };
+    for (unsigned i = 0; i < sizeof a / sizeof a[0]; i++) {
+        bool got = follow_at_once(a[i].click_at, a[i].now, a[i].mc_up);
+        if (got == a[i].want) continue;
+        printf("FAIL follow_at_once: %s = %d; want %d\n", a[i].what, got, a[i].want);
+        failed++;
+    }
     if (!failed) printf("ok\n");
     return failed != 0;
 }
