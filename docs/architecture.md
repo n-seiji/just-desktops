@@ -16,7 +16,7 @@ just-desktops is one process on the main run loop. It emulates desktops by movin
 | `wm_ui.c` | Redraw the focus ring and the menu bar for the focused window. |
 | `wm_list.c` | The window lists the switchers and the menu bar draw from. |
 | `ax.c` | Typed reads of Accessibility attributes. |
-| `hotkey.c` | The keyboard event tap: reads each event, asks `keyrules_decide` (desktop keys, ⌥[ ⌥], ⌥Tab, Esc) and runs the action on the main queue. |
+| `hotkey.c` | The keyboard event tap: reads each event, asks `keyrules_decide` (desktop keys, ⌥[ ⌥], ⌥Tab, Esc) and runs the action on the main queue. A second, listen-only tap records when a mouse button last went down. |
 | `switcher.c`, `switcher_card.c`, `swkit.c` | List and instant switcher, square switcher, the SkyLight drawing helpers they share. |
 | `thumb.m` | Window screenshots for the square switcher (ScreenCaptureKit). |
 | `border.c` | The focus ring: four thin SkyLight windows. |
@@ -24,13 +24,13 @@ just-desktops is one process on the main run loop. It emulates desktops by movin
 | `menubar.m` | The status item: strip drawing, click handling. |
 | `menubar_glyph.m`, `menubar_overflow.m`, `menubar_menu.m` | App glyph masks, the "+k" panel, the right-click menu. |
 
-Pure logic, with a unit test each in `tests/`: `select.c` (selection stepping), `keyrules.c` (modifier match, repeat throttle, which keys call a window, and what the keyboard tap swallows and runs for each event), `strip.c` (strip geometry: slot positions in the image and in the button, hit test), `order.c` (menu bar order and overflow split), `membership.c` (the saved desktops file: format, parse, pins), `shown.c` (visibility, grace period, parking point), `follow.c` (what to do when a window gets focus), `hist.c` (focus history for ⌥[ ⌥]), `cardmath.c` (easing, card layout and the list highlight's slide), `border_geom.c` (ring rects), `glyph.c` (icon to mask), `title.c` (row text, and which windows of one app get numbered).
+Pure logic, with a unit test each in `tests/`: `select.c` (selection stepping), `keyrules.c` (modifier match, repeat throttle, which keys call a window, and what the keyboard tap swallows and runs for each event), `strip.c` (strip geometry: slot positions in the image and in the button, hit test), `order.c` (menu bar order and overflow split), `membership.c` (the saved desktops file: format, parse, pins), `shown.c` (visibility, grace period, parking point), `follow.c` (what to do when a window gets focus, and whether a Mission Control click switches at once), `hist.c` (focus history for ⌥[ ⌥]), `cardmath.c` (easing, card layout and the list highlight's slide), `border_geom.c` (ring rects), `glyph.c` (icon to mask), `title.c` (row text, and which windows of one app get numbered).
 
 Headers: one per module, and `common.h` for the limits and `sw_entry_t` several modules share. `wm_priv.h` and `menubar_priv.h` are for the files of that module only.
 
 ## Data flow
 
-Events come in from three places: Accessibility observers (window created, destroyed, focused, minimized), NSWorkspace (app launched, quit, activated) and the keyboard tap. `wm*.c` is the only owner of state: which windows exist, their desktop, whether they are parked, which desktop is current.
+Events come in from three places: Accessibility observers (window created, destroyed, focused, minimized), NSWorkspace (app launched, quit, activated) and the event taps. `wm*.c` is the only owner of state: which windows exist, their desktop, whether they are parked, which desktop is current.
 
 After every change `wm_refresh_ui` reads the focused window once, then calls `border_show` or `border_hide` and `menubar_update`. A desktop switch draws them for the window it just gave focus to instead, because macOS still reports the one before for a moment. The switchers pull a fresh list from `wm_windows` when they open and call `wm_focus_wid` to commit. Nothing outside `wm*.c` writes window state.
 
@@ -67,7 +67,7 @@ Window tracking also logs `found parked by a previous run` when it finds a windo
 
 ## Threading
 
-There is one thread. The event tap, the Accessibility observers, the SkyLight notification port, the animation timers and the signal handlers all run on the main run loop. The tap callback only decides and then hops to the main queue with `dispatch_async`; the work happens there. With the menu bar on, `[NSApp run]` is that loop; without it, a plain `CFRunLoopRunInMode` loop with an autorelease pool per event. ScreenCaptureKit completions are delivered on the main queue.
+There is one thread. The event tap, the Accessibility observers, the SkyLight notification port, the animation timers and the signal handlers all run on the main run loop. The click tap is listen-only and only stores a time, because the main thread can block in Accessibility calls for up to a second and an active tap would stall every click meanwhile. It exists because `CGEventSourceSecondsSinceLastEventType` refreshes on a 0.5 s grid on macOS 27, so a click would show up late; if the tap cannot be created, that counter is read instead. The key tap's callback only decides and then hops to the main queue with `dispatch_async`; the work happens there. With the menu bar on, `[NSApp run]` is that loop; without it, a plain `CFRunLoopRunInMode` loop with an autorelease pool per event. ScreenCaptureKit completions are delivered on the main queue.
 
 ## Memory rules
 
