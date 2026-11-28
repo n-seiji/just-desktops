@@ -14,8 +14,8 @@ Each one names how a user reaches the feature, how to drive it, and what proves 
 - **Drive.** `jd-drive key 18`, wait 1.2 s, `open -a "Mission Control"`, wait 1 s, `jd-drive click <x> <y>` on the thumbnail.
 - **Proof.** One `reason=follow trigger=ax-focus cur=1->N` line and the new desktop on screen in the recording.
 - **Gotchas.**
-  - A posted click (`jd-drive click` posts at `kCGHIDEventTap`) reaches the click tap, so just-desktops sees it at once and this journey should take the at-once path: one zoom that lands on the new desktop with no striped frames. Expected, to be verified on the real desktop.
-  - For the same reason a posted click should count as "you calling a window" during a quiet period (expected, to be verified). Wait 4 s after a switch before the click anyway, so the quiet period is not what is being tested.
+  - A posted click (`jd-drive click` posts at `kCGHIDEventTap`) reaches the click tap, so just-desktops sees it at once and this journey takes the at-once path: one zoom that lands on the new desktop with no striped frames. Seen on macOS 27.2: the `follow` line 0.3 to 0.4 s after the click, and the recording lands on the new desktop by 0.25 s. The system's own click time (`CGEventSourceSecondsSinceLastEventType`) refreshes only every 0.5 s, which is why the app keeps its own.
+  - For the same reason a posted click counts as "you calling a window" during a quiet period (not driven yet). Wait 4 s after a switch before the click anyway, so the quiet period is not what is being tested.
   - Thumbnails move between runs, so take the point from a fresh frame. A click on a window of the current desktop logs nothing.
   - Mission Control is recognised by WindowManager's display-sized layer 19 window, seen on macOS 27.2.1 only.
 
@@ -85,7 +85,7 @@ A journey with a **Seen** line was run, on macOS 27.2 with `switcher = off` and 
 - **Reach.** Open more windows than the strip has slots, with `menubar = on`.
 - **Drive.** Open windows with `open -na TextEdit` repeatedly until the strip ends in "+k", then `jd-drive click <x> <y>` on the "+k" slot (take the point from a screenshot), then `jd-drive click` on a row, then on the desktop.
 - **Proof.** A screenshot of the strip shows the current desktop's key and a glyph per window, and "+k" with k the count of windows without a glyph. After the click a panel lists them. A click elsewhere closes it. A click on a row focuses that window. Clicking a window in the strip focuses it and may switch desktops (`trigger=menubar`).
-- **Gotchas.** A posted click reaches the listen-only click tap like a real one (expected, to be verified), but it carries no hardware details, so what an app does with it may still differ. The status item is drawn by the system: take the screenshot of the whole menu bar.
+- **Gotchas.** A posted click reaches the listen-only click tap like a real one, but it carries no hardware details, so what an app does with it may still differ. The status item is drawn by the system: take the screenshot of the whole menu bar.
 
 ## Quit and restart with the desktops kept
 
@@ -114,7 +114,7 @@ A journey with a **Seen** line was run, on macOS 27.2 with `switcher = off` and 
 
 ## Not driven automatically
 
-- A `reason=call` line from a click. A posted click should count as input for just-desktops through the click tap (expected, to be verified). A posted key does reach the key tap, but no journey here produces `call` with one yet.
+- A `reason=call` line from a click. A posted click counts as input for just-desktops through the click tap, so this is drivable now, but no journey does it yet. A posted key does reach the key tap, but no journey here produces `call` with one yet.
 - A display being added, removed or rearranged (`repark`). It needs hardware or System Settings.
 - An app that has hung. Accessibility calls to it time out, and a test app that hangs on purpose is not in this repo.
 - The tap being disabled by the system, and a `⌥` release missed in that time.
