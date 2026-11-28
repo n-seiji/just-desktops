@@ -1,7 +1,6 @@
 #include "wm.h"
 #include "wm_priv.h"
 #include "apps.h"
-#include "ax.h"
 #include "config.h"
 #include "follow.h"
 #include "hist.h"
@@ -9,12 +8,11 @@
 #include "menubar.h"
 #include "shown.h"
 #include "skylight.h"
-#include <dispatch/dispatch.h>
 #include <os/log.h>
 #include <stdio.h>
 
-// Parking, switching and focus. A window of an inactive desktop sits at the bottom-right corner of
-// the display furthest right (see shown_park_display); a desktop switch parks one set and unparks another with
+// Switching and focus. A window of an inactive desktop is parked (see wm_park.c); a desktop switch parks one
+// set and unparks another with
 // the screen held still until the new ones are in place (see release_when_in_place), and a parked window that
 // gets focused (Raycast, Cmd-Tab, Dock) switches to its desktop instead of coming here, after a short
 // check that the user did not just minimize, close or quit their window here. In the quiet period after a

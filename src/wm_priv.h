@@ -63,7 +63,7 @@ void wm_log_repark(int n); // os_log n parked windows sent to the new corner
 void wm_log_reshow(const win_t *w, CGPoint want, CGPoint got); // os_log an unparked window that was not where it was sent
 
 // wm_ui.c: the focus ring and the menu bar
-void wm_ui_draw(win_t *w); // the ring and the menu bar for w, the focused window looked up once by the caller
+void wm_ui_draw(win_t *w); // the ring and the menu bar for w, the window the caller knows has the focus
 void wm_ui_menubar_now(void); // the menu bar for the focused window, if it is up
 void wm_refresh_menubar_later(void); // again once WindowServer lists the windows just shown or focused
 void wm_mark_fresh(uint32_t wid, double now); // the menu bar prefers wid to macOS's lagging focus for a moment
